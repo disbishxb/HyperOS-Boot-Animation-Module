@@ -1,2 +1,5 @@
-# HyperOS-Boot-Animation-Module
-为HyperOS提供的开机动画模块,有多种拓展功能A boot animation module for HyperOS with various extended features.【Magisk Module】
+# HyperOS-Boot-Animation-Module_V2.2.2-beta
+·支持导入、切换和删除功能
+·Supports import, switch, and delete
+·支持自由挂载(bond mount)
+·Flexible bind mount support
