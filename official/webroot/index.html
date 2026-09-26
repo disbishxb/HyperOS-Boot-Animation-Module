@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HyperOS 启动动画</title>
+  <link rel="stylesheet" href="/internal/insets.css">
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; background: #10131a; color: #f5f7fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: linear-gradient(145deg, #15243b, #10131a 42%); }
+    main { max-width: 720px; margin: auto; padding: calc(22px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom)); }
+    h1 { margin: 0; font-size: 27px; } h2 { margin: 0; font-size: 17px; } p { line-height: 1.55; }
+    .eyebrow { margin: 0 0 5px; color: #91c1ff; font-size: 12px; font-weight: 700; letter-spacing: .1em; }
+    .muted, .note { color: #bac3d1; font-size: 14px; } .note { margin-bottom: 0; font-size: 12px; }
+    .card { margin-top: 16px; padding: 16px; border: 1px solid #2f3b4e; border-radius: 16px; background: rgba(19, 24, 33, .9); }
+    .card-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    details summary { cursor: pointer; font-size: 15px; font-weight: 700; color: #dceaff; }
+    .log-box { margin-top: 12px; max-height: 260px; overflow: auto; padding: 10px 12px; border: 1px solid #2f3b4e; border-radius: 10px; background: #121722; color: #b9c5dc; font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+    .library { display: grid; gap: 10px; margin-top: 14px; }
+    .item { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #303a4b; border-radius: 12px; background: #171d27; }
+    .item.active { border-color: #79b1ff; background: #1a3152; }
+    .copy { min-width: 0; flex: 1; } .name { overflow: hidden; font-size: 14px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { margin-top: 4px; color: #b0bdcf; font-size: 12px; }
+    .badge { display: inline-block; margin-left: 7px; padding: 2px 6px; border-radius: 99px; background: #376bad; color: #eff6ff; font-size: 10px; }
+    button, .file-button { min-height: 40px; border: 0; border-radius: 10px; padding: 0 13px; background: #acd0ff; color: #08111d; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus, button:focus-visible, input[type=text]:focus, input[type=file]:focus-visible { outline: none; }
+    .secondary { border: 1px solid #50698d; background: #243755; color: #dceaff; } .danger { border: 1px solid #8d4b56; background: #3a2226; color: #ffc9c4; } button:disabled, .disabled { cursor: not-allowed; opacity: .5; }
+    .file-button { display: inline-flex; align-items: center; } input[type=file] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .upload-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 13px; }
+    .selected { color: #dce8f8; font-size: 13px; word-break: break-word; }
+    .status { min-height: 21px; margin: 13px 0 0; color: #bcc6d4; font-size: 13px; white-space: pre-wrap; word-break: break-word; }.error { color: #ffb4ad; }.success { color: #9ad7a5; }
+    .empty { padding: 12px; border-radius: 10px; background: #1a202b; color: #bac3d1; font-size: 14px; } progress { width: 100%; height: 7px; margin-top: 12px; } code { color: #cae1ff; }
+    .radio-group { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+    .radio-group label { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; }
+    .radio-group input[type="radio"] { width: 16px; height: 16px; accent-color: #79b1ff; }
+    .btn-block { width: 100%; min-height: 38px; margin-top: 8px; }
+    .mt-8 { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .mb-8 { margin-bottom: 8px; }
+    .text-center { text-align: center; }
+    .text-muted { color: #6a7a8a; font-size: 12px; }
+    .text-success { color: #9ad7a5; }
+    .text-warning { color: #ffb4ad; }
+    .text-info { color: #bac3d1; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow" data-i18n="eyebrow">HYPEROS BOOT ANIMATION</p>
+    <h1 data-i18n="title">启动动画设置</h1>
+    <p class="muted" data-i18n="description">选择一个动画后，模块会自动把它应用为系统读取的 <code>bootanimation.zip</code>。更换后请重启设备。</p>
+    <p class="note" data-i18n="version">原版：Saigetsu · 二改：小雨 · 三改：9008 v2.3.2</p>
+
+    <!-- ========== 动画库 ========== -->
+    <section class="card">
+      <div class="card-head">
+        <h2 data-i18n="library_title">动画库</h2>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button id="toggle-overlay" class="secondary" style="min-height: 32px; padding: 0 14px; font-size: 12px; border-color: #4caf50; color: #9ad7a5;" data-i18n="overlay_enabled">✅ 覆盖已启用</button>
+          <button class="secondary" id="reset-default" type="button" data-i18n="reset_default">恢复默认（MIUI粒子效果）</button>
+        </div>
+      </div>
+      <p class="muted" id="current" data-i18n="loading">正在读取当前设置…</p>
+      <div class="library" id="library"></div>
+      <p class="status" id="library-status"></p>
+      <p class="note" data-i18n="builtin_note">内置动画（MIUI粒子效果）不可删除；导入的动画可删除。</p>
+    </section>
+
+    <!-- ========== 状态与日志 ========== -->
+    <section class="card">
+      <details>
+        <summary data-i18n="status_title">状态与日志</summary>
+        <p style="padding: 20px 0; text-align: center; font-size: 18px; color: #9ad7a5;" data-i18n="status_cut">✅ 功能已阉割</p>
+      </details>
+    </section>
+
+    <!-- ========== 导入动画 ========== -->
+    <section class="card">
+      <h2 data-i18n="import_title">导入动画</h2>
+      <p class="muted" data-i18n="import_desc">用手机文件选择器直接选 zip，或先把 zip 放到"下载"目录再扫描导入。</p>
+      <p class="note" data-i18n="import_method1">方式一：手机文件选择器</p>
+      <div class="upload-row">
+        <label class="file-button" id="pick-label" for="pick-zip" data-i18n="pick_file">选择 ZIP 文件</label>
+        <input id="pick-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+        <span class="selected" id="pick-name" data-i18n="no_file">尚未选择文件</span>
+        <button class="secondary" id="pick-import" type="button" disabled data-i18n="import_btn">导入</button>
+      </div>
+      <progress id="pick-progress" value="0" max="100" hidden></progress>
+      <p class="note" data-i18n="import_hint1">提示：大文件先放到"下载"目录再扫描导入，速度更快。</p>
+      <p class="note" data-i18n="import_hint2">导入时如果名称与已有动画相同，会自动改名（如 MIUI粒子效果-2.zip），不会覆盖原文件。</p>
+      <p class="note" data-i18n="import_method2">方式二：扫描手机存储</p>
+      <div class="upload-row">
+        <button type="button" id="scan-storage" data-i18n="scan_storage">扫描手机存储</button>
+        <span class="selected" id="storage-hint"></span>
+      </div>
+      <div class="library" id="storage-list"></div>
+      <p class="status" id="import-status"></p>
+    </section>
+
+    <!-- ========== 实验性功能 ========== -->
+    <section class="card">
+      <details>
+        <summary data-i18n="experimental_title">🧪 实验性功能</summary>
+
+        <!-- 更多播放功能 -->
+        <details class="sub-details" style="margin-top: 12px; background: #1a202b; border: 1px solid #3a4b5e; border-radius: 12px; padding: 12px;">
+          <summary data-i18n="more_play_title" style="font-size: 14px; color: #dceaff;">🎬 更多播放功能</summary>
+          <p class="text-muted" data-i18n="more_play_hint">💡 需要先启用「覆盖功能」才能使用</p>
+          <div id="play-mode-status" class="info-box" style="padding: 8px 12px; margin: 8px 0; border-radius: 8px; background: #1a202b; font-size: 13px; color: #bac3d1;"><span data-i18n="checking">🔍 正在检测覆盖状态…</span></div>
+          <div class="radio-group">
+            <label><input type="radio" name="play-mode-radio" value="off" checked> <span data-i18n="play_off">⏹ 关闭（使用固定动画）</span></label>
+            <label><input type="radio" name="play-mode-radio" value="random"> <span data-i18n="play_random">🎲 随机播放</span></label>
+            <label><input type="radio" name="play-mode-radio" value="sequential"> <span data-i18n="play_sequential">🔄 顺序轮换</span></label>
+          </div>
+          <div id="play-mode-info" class="info-box" style="padding: 8px 12px; margin: 8px 0; border-radius: 8px; background: #1a202b; font-size: 13px; color: #bac3d1;"><span data-i18n="play_pool">动画池：加载中…</span></div>
+          <button id="save-play-mode" class="secondary btn-block" disabled data-i18n="save_mode">保存模式</button>
+          <p class="text-muted mt-8"><span data-i18n="reboot_hint">⚠️ 修改后需要重启设备才能生效</span></p>
+        </details>
+
+      </details>
+    </section>
+
+    <!-- ========== 语言 ========== -->
+    <section class="card">
+      <details>
+        <summary data-i18n="language_title">🌐 语言</summary>
+        <p style="padding: 8px 0; font-size: 13px; color: #bac3d1;" data-i18n="language_hint">💡 切换后若文本未改请重新进入模块界面</p>
+        <div class="radio-group">
+          <label><input type="radio" name="language-radio" value="zh"> <span data-i18n="lang_zh">🇨🇳 简体中文</span></label>
+          <label><input type="radio" name="language-radio" value="en"> <span data-i18n="lang_en">🇬🇧 English</span></label>
+        </div>
+        <p id="language-status" style="margin: 8px 0 0; font-size: 13px; color: #bac3d1;"></p>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      // ========== 国际化 ==========
+      const i18n = {
+        zh: {
+          eyebrow: 'HYPEROS BOOT ANIMATION',
+          title: '启动动画设置',
+          description: '选择一个动画后，模块会自动把它应用为系统读取的 bootanimation.zip。更换后请重启设备。',
+          version: '原版：Saigetsu · 二改：小雨 · 三改：9008 v2.3.2',
+          library_title: '动画库',
+          overlay_enabled: '✅ 覆盖已启用',
+          overlay_disabled: '⛔ 覆盖已禁用',
+          reset_default: '恢复默认（MIUI粒子效果）',
+          builtin_note: '内置动画（MIUI粒子效果）不可删除；导入的动画可删除。',
+          status_title: '状态与日志',
+          status_cut: '✅ 功能已阉割',
+          import_title: '导入动画',
+          import_desc: '用手机文件选择器直接选 zip，或先把 zip 放到"下载"目录再扫描导入。',
+          import_method1: '方式一：手机文件选择器',
+          pick_file: '选择 ZIP 文件',
+          no_file: '尚未选择文件',
+          import_btn: '导入',
+          import_hint1: '提示：大文件先放到"下载"目录再扫描导入，速度更快。',
+          import_hint2: '导入时如果名称与已有动画相同，会自动改名（如 MIUI粒子效果-2.zip），不会覆盖原文件。',
+          import_method2: '方式二：扫描手机存储',
+          scan_storage: '扫描手机存储',
+          experimental_title: '🧪 实验性功能',
+          more_play_title: '🎬 更多播放功能',
+          more_play_hint: '💡 需要先启用「覆盖功能」才能使用',
+          checking: '🔍 正在检测覆盖状态…',
+          play_off: '⏹ 关闭（使用固定动画）',
+          play_random: '🎲 随机播放',
+          play_sequential: '🔄 顺序轮换',
+          play_pool: '动画池：加载中…',
+          save_mode: '保存模式',
+          reboot_hint: '⚠️ 修改后需要重启设备才能生效',
+          language_title: '🌐 语言',
+          language_hint: '💡 切换后若文本未改请重新进入模块界面',
+          lang_zh: '🇨🇳 简体中文',
+          lang_en: '🇬🇧 English',
+          language_switch_success: '✅ 已切换至 ',
+          play_mode_saved: '✅ 播放模式已保存为 ',
+          play_mode_off: '关闭',
+          play_mode_random: '随机播放',
+          play_mode_sequential: '顺序轮换',
+          toggle_overlay_disable_hint: '禁用后模块将不再自动覆盖开机动画，你可以自行替换系统动画文件。',
+          toggle_overlay_enable_hint: '启用后模块将恢复自动覆盖开机动画。',
+          toggle_overlay_disable: '禁用',
+          toggle_overlay_enable: '启用'
+        },
+        en: {
+          eyebrow: 'HYPEROS BOOT ANIMATION',
+          title: 'Boot Animation Settings',
+          description: 'Select an animation and the module will automatically apply it as bootanimation.zip. Reboot to take effect.',
+          version: 'Original: Saigetsu · Mod: Xiaoyu · ReMod: 9008 v2.3.2',
+          library_title: 'Animation Library',
+          overlay_enabled: '✅ Overlay Enabled',
+          overlay_disabled: '⛔ Overlay Disabled',
+          reset_default: 'Reset Default (MIUI Particle)',
+          builtin_note: 'Built-in animations cannot be deleted; imported animations can be deleted.',
+          status_title: 'Status & Logs',
+          status_cut: '✅ Feature Removed',
+          import_title: 'Import Animation',
+          import_desc: 'Select a ZIP file directly, or put it in "Download" folder and scan.',
+          import_method1: 'Method 1: File Picker',
+          pick_file: 'Select ZIP File',
+          no_file: 'No file selected',
+          import_btn: 'Import',
+          import_hint1: 'Tip: Put large files in "Download" folder and scan for faster import.',
+          import_hint2: 'If name conflicts, it will be renamed (e.g. MIUI粒子效果-2.zip), original file not overwritten.',
+          import_method2: 'Method 2: Scan Storage',
+          scan_storage: 'Scan Storage',
+          experimental_title: '🧪 Experimental Features',
+          more_play_title: '🎬 More Play Modes',
+          more_play_hint: '💡 Overlay must be enabled to use this',
+          checking: '🔍 Checking overlay status…',
+          play_off: '⏹ Off (fixed animation)',
+          play_random: '🎲 Random',
+          play_sequential: '🔄 Sequential',
+          play_pool: 'Animation pool: Loading…',
+          save_mode: 'Save Mode',
+          reboot_hint: '⚠️ Reboot required after modifying',
+          language_title: '🌐 Language',
+          language_hint: '💡 If text not changed, please re-enter module interface',
+          lang_zh: '🇨🇳 Chinese (Simplified)',
+          lang_en: '🇬🇧 English',
+          language_switch_success: '✅ Switched to ',
+          play_mode_saved: '✅ Play mode saved: ',
+          play_mode_off: 'Off',
+          play_mode_random: 'Random',
+          play_mode_sequential: 'Sequential',
+          toggle_overlay_disable_hint: 'After disabling, the module will no longer auto-overlay boot animation. You can manually replace system animation files.',
+          toggle_overlay_enable_hint: 'After enabling, the module will resume auto-overlaying boot animation.',
+          toggle_overlay_disable: 'Disable',
+          toggle_overlay_enable: 'Enable'
+        }
+      };
+
+      let currentLang = 'zh';
+
+      function t(key) {
+        return i18n[currentLang]?.[key] || i18n.zh[key] || key;
+      }
+
+      function applyLanguage(lang) {
+        currentLang = lang || currentLang;
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.dataset.i18n;
+          if (key) {
+            const text = t(key);
+            if (el.tagName === 'INPUT' && el.type === 'button') {
+              el.value = text;
+            } else {
+              el.textContent = text;
+            }
+          }
+        });
+      }
+
+      async function loadLanguage() {
+        try {
+          const out = await controlCommand('language-get');
+          const lang = out.trim();
+          if (lang === 'en' || lang === 'zh') {
+            currentLang = lang;
+            document.querySelectorAll('input[name="language-radio"]').forEach(r => {
+              r.checked = r.value === lang;
+            });
+            applyLanguage(lang);
+          }
+        } catch (_) {}
+      }
+
+      // ========== 常量 ==========
+      const DEFAULT_DIR = "/data/adb/modules/hyperosbootanim";
+      const STORAGE_DIRS = ["/sdcard/Download", "/storage/emulated/0/Download", "/sdcard/CustomBoot", "/sdcard", "/storage/emulated/0", "/data/local/tmp"];
+      const CHUNK = 90 * 1024;
+
+      // ========== DOM 引用 ==========
+      const el = {
+        current: document.getElementById("current"),
+        library: document.getElementById("library"),
+        libraryStatus: document.getElementById("library-status"),
+        resetDefault: document.getElementById("reset-default"),
+        logStatus: document.getElementById("log-status"),
+        logContent: document.getElementById("log-content"),
+        pickLabel: document.getElementById("pick-label"),
+        pickZip: document.getElementById("pick-zip"),
+        pickName: document.getElementById("pick-name"),
+        pickImport: document.getElementById("pick-import"),
+        pickProgress: document.getElementById("pick-progress"),
+        scanStorage: document.getElementById("scan-storage"),
+        storageHint: document.getElementById("storage-hint"),
+        storageList: document.getElementById("storage-list"),
+        importStatus: document.getElementById("import-status")
+      };
+
+      let moduleDir = DEFAULT_DIR;
+      let busy = false;
+      let execMode = "sync";
+      let cbSeq = 0;
+      let storageFiles = [];
+      let chosenFile = null;
+
+      // ========== 工具函数 ==========
+      const bridgeReady = () => typeof window.ksu !== "undefined" && typeof window.ksu.exec === "function";
+      const uploadReady = () => bridgeReady() && typeof window.ksu.fileOutputStream === "function";
+      const shellQuote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
+      const control = (...args) => [shellQuote(moduleDir + "/bin/bootanimctl.sh"), ...args.map(shellQuote)].join(" ");
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const controlCommand = (...args) => command(control(...args));
+      const paint = () => new Promise(resolve => setTimeout(resolve, 50));
+
+      function detectExecMode() {
+        return new Promise(resolve => {
+          let done = false;
+          const settle = mode => { if (!done) { done = true; resolve(mode); } };
+          const tryForm = args => {
+            const name = "__ksu_probe_" + Date.now() + "_" + (++cbSeq);
+            const timer = setTimeout(() => { delete window[name]; }, 600);
+            window[name] = () => { clearTimeout(timer); delete window[name]; settle(args.length === 3 ? "async" : "async2"); };
+            try {
+              const ret = window.ksu.exec.apply(window.ksu, ["echo ksu-webui-probe", null, "window." + name].slice(0, args.length));
+              if (ret !== undefined && ret !== null && !(ret && typeof ret.then === "function")) {
+                clearTimeout(timer); delete window[name]; settle("sync");
+              }
+            } catch (_) { clearTimeout(timer); delete window[name]; settle("sync"); }
+          };
+          tryForm([1, 2, 3]);
+          setTimeout(() => { if (!done) tryForm([1, 2]); }, 650);
+          setTimeout(() => { settle("sync"); }, 1400);
+        });
+      }
+
+      async function command(text) {
+        if (!bridgeReady()) throw new Error("未检测到模块设置接口（KernelSU/APatch）");
+        if (execMode === "async" || execMode === "async2") {
+          return new Promise((resolve, reject) => {
+            const name = "__ksu_cb_" + (++cbSeq);
+            const timer = setTimeout(() => { delete window[name]; reject(new Error("命令执行超时")); }, 120000);
+            window[name] = (code, stdout) => { clearTimeout(timer); delete window[name]; resolve(stdout == null ? "" : String(stdout)); };
+            try { window.ksu.exec(text, null, "window." + name); }
+            catch (e) { clearTimeout(timer); delete window[name]; reject(e); }
+          });
+        }
+        const value = await Promise.resolve(window.ksu.exec(text));
+        return value == null ? "" : String(value);
+      }
+
+      function status(target, text, kind = "") { target.textContent = text; target.className = "status" + (kind ? " " + kind : ""); }
+      function isOk(result) { return String(result || "").split(/\r?\n/).some(line => line.trim().startsWith("OK ")); }
+      function friendlyError(text) {
+        const lines = String(text || "").split(/\r?\n/);
+        const errLine = lines.find(l => l.trim().startsWith("ERROR ")) || lines[0] || "";
+        let msg = errLine.trim().replace(/^ERROR\s*/, "");
+        if (!msg) msg = "操作失败，请重试";
+        if (/invalid ZIP archive|invalid bootanimation archive/i.test(msg)) msg = "不是有效的开机动画 zip（需要是 ZIP 格式，且根目录包含 desc.txt）";
+        else if (/bad zip magic|not PK/i.test(msg)) msg = "不是有效的 zip 文件";
+        else if (/file not found|animation not found|empty source|invalid animation index/i.test(msg)) msg = "找不到该文件或动画，请重新选择";
+        return msg;
+      }
+      function displayName(path) { let raw = String(path || "").split("/").pop().replace(/\.zip$/i, ""); raw = raw.replace(/[\u0000-\u001f\u007f]+/g, " ").trim(); return raw || "未知动画"; }
+      function bytes(value) {
+        let size = Number(value); if (!Number.isFinite(size) || size < 0) return "未知大小";
+        const units = ["B", "KB", "MB", "GB"]; let unit = 0;
+        while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit++; }
+        return (unit ? size.toFixed(size >= 10 ? 0 : 1) : size) + " " + units[unit];
+      }
+      function props(output) {
+        const result = {};
+        output.split(/\r?\n/).forEach(line => { const at = line.indexOf("="); if (at > 0) result[line.slice(0, at)] = line.slice(at + 1); });
+        return result;
+      }
+      function entries(output) {
+        return output.split(/\r?\n/).filter(Boolean).map(line => {
+          const part = line.split("\t");
+          return part.length >= 5 ? { id: part[0], path: part[1], size: part[2], active: part[3] === "yes", info: part[4] } : null;
+        }).filter(Boolean);
+      }
+
+      function updateControls() {
+        const ready = bridgeReady();
+        el.pickZip.disabled = busy || !ready;
+        el.pickLabel.classList.toggle("disabled", el.pickZip.disabled);
+        el.pickImport.disabled = busy || !chosenFile || !ready;
+        el.scanStorage.disabled = busy || !ready;
+        el.resetDefault.disabled = busy || !ready;
+        el.library.querySelectorAll("button").forEach(button => { button.disabled = busy; });
+        el.storageList.querySelectorAll("button").forEach(button => { button.disabled = busy; });
+        document.querySelectorAll('input[name="language-radio"]').forEach(r => { r.disabled = busy; });
+      }
+
+      function render(list) {
+        el.library.replaceChildren();
+        if (!list.length) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "动画库为空，请先导入一个 zip。"; el.library.append(empty); return;
+        }
+        list.forEach(entry => {
+          const item = document.createElement("div"); item.className = "item" + (entry.active ? " active" : "");
+          const copy = document.createElement("div"); copy.className = "copy";
+          const name = document.createElement("div"); name.className = "name"; name.textContent = displayName(entry.path); name.title = entry.path;
+          if (entry.active) { const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = "当前使用"; name.append(badge); }
+          const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = (entry.info ? entry.info + " · " : "") + bytes(entry.size) + " · " + entry.path;
+          copy.append(name, meta);
+          const button = document.createElement("button"); button.type = "button"; button.dataset.active = entry.active ? "yes" : "no";
+          button.className = entry.active ? "secondary" : ""; button.textContent = entry.active ? "已应用" : "使用此动画";
+          button.addEventListener("click", () => {
+            if (busy) return;
+            if (entry.active) { status(el.libraryStatus, "这个动画已经是当前使用的动画。", "error"); return; }
+            if (button.dataset.confirm !== "yes") {
+              button.dataset.confirm = "yes"; button.textContent = "确认切换？";
+              status(el.libraryStatus, "再点一次将把当前生效动画切换为 “" + displayName(entry.path) + "”（重启后生效），其他动画文件不会被修改。");
+              setTimeout(() => { if (button.dataset.confirm === "yes") { button.dataset.confirm = ""; button.textContent = "使用此动画"; } }, 5000);
+              return;
+            }
+            choose(entry);
+          });
+          if (entry.path.indexOf("/animations/") !== -1) {
+            const delButton = document.createElement("button"); delButton.type = "button"; delButton.className = "secondary danger"; delButton.textContent = "删除";
+            delButton.addEventListener("click", () => {
+              if (busy) return;
+              if (entry.active) { status(el.libraryStatus, "当前使用的动画不能删除，请先切换其他动画再删除。", "error"); return; }
+              if (delButton.dataset.confirm !== "yes") {
+                delButton.dataset.confirm = "yes"; delButton.textContent = "确认删除？";
+                if (el.library.querySelectorAll(".item").length <= 1) {
+                  status(el.libraryStatus, "注意：这是最后一个动画，删除后动画库将为空（当前生效的动画不受影响）。再点一次“确认删除？”执行。", "error");
+                }
+                setTimeout(() => { if (delButton.dataset.confirm === "yes") { delButton.dataset.confirm = ""; delButton.textContent = "删除"; } }, 3000);
+                return;
+              }
+              removeEntry(entry);
+            });
+            item.append(copy, button, delButton);
+          } else {
+            item.append(copy, button);
+          }
+          el.library.append(item);
+        });
+      }
+
+      async function removeEntry(entry) {
+        if (busy) return;
+        busy = true; updateControls(); status(el.libraryStatus, "正在删除 “" + displayName(entry.path) + "”…"); await paint();
+        try {
+          const result = await controlCommand("delete", entry.id);
+          if (!isOk(result)) throw new Error(result || "删除失败");
+          await refresh();
+          status(el.libraryStatus, "已删除 “" + displayName(entry.path) + "”。", "success");
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function refresh() {
+        if (!bridgeReady()) { el.current.textContent = "请在模块设置中打开此页面。"; status(el.libraryStatus, "模块设置接口不可用。", "error"); updateControls(); return; }
+        try {
+          const [statusOut, listOut] = await Promise.all([controlCommand("status"), controlCommand("list")]);
+          const current = props(statusOut);
+          let text = bytes(current.payload_size) + " · 共 " + current.available_animations + " 个可选";
+          if (current.import_busy === "yes") text += " · 正在导入中…";
+          el.current.textContent = text;
+          const listData = entries(listOut);
+          render(listData);
+          if (current.language) {
+            currentLang = current.language;
+            applyLanguage(currentLang);
+            document.querySelectorAll('input[name="language-radio"]').forEach(r => {
+              r.checked = r.value === currentLang;
+            });
+          }
+          updateControls();
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      // ========== 覆盖开关 ==========
+      const toggleOverlayBtn = document.getElementById('toggle-overlay');
+
+      async function loadOverlayStatus() {
+        try {
+          const out = await controlCommand('status');
+          const current = props(out);
+          const disabled = current.module_disabled === 'yes';
+          updateOverlayButton(disabled);
+        } catch (_) {}
+      }
+
+      function updateOverlayButton(disabled) {
+        if (disabled) {
+          toggleOverlayBtn.textContent = '⛔ ' + t('overlay_disabled');
+          toggleOverlayBtn.style.borderColor = '#6a7a8a';
+          toggleOverlayBtn.style.color = '#6a7a8a';
+          toggleOverlayBtn.dataset.enabled = 'false';
+        } else {
+          toggleOverlayBtn.textContent = '✅ ' + t('overlay_enabled');
+          toggleOverlayBtn.style.borderColor = '#4caf50';
+          toggleOverlayBtn.style.color = '#9ad7a5';
+          toggleOverlayBtn.dataset.enabled = 'true';
+        }
+      }
+
+      toggleOverlayBtn.addEventListener('click', async () => {
+        if (busy) return;
+        const currentlyEnabled = toggleOverlayBtn.dataset.enabled === 'true';
+        const action = currentlyEnabled ? t('toggle_overlay_disable') : t('toggle_overlay_enable');
+        const hint = currentlyEnabled ? t('toggle_overlay_disable_hint') : t('toggle_overlay_enable_hint');
+        if (!confirm(`确定要${action}开机动画覆盖功能吗？\n\n${hint}`)) return;
+        busy = true;
+        updateControls();
+        status(el.libraryStatus, `正在${action}覆盖功能…`);
+        await paint();
+        try {
+          const result = await controlCommand(currentlyEnabled ? 'disable' : 'enable');
+          if (!isOk(result)) throw new Error(result || '操作失败');
+          await refresh();
+          await loadOverlayStatus();
+          status(el.libraryStatus, `✅ 已${action}覆盖功能，请重启设备生效`, 'success');
+        } catch (e) {
+          status(el.libraryStatus, friendlyError(e.message || String(e)), 'error');
+        } finally {
+          busy = false;
+          updateControls();
+        }
+      });
+
+      // ========== 语言切换 ==========
+      document.querySelectorAll('input[name="language-radio"]').forEach(radio => {
+        radio.addEventListener('change', async () => {
+          if (busy) return;
+          if (!radio.checked) return;
+          const lang = radio.value;
+          busy = true;
+          try {
+            const result = await controlCommand('language-set', lang);
+            if (!isOk(result)) throw new Error(result || '切换失败');
+            currentLang = lang;
+            applyLanguage(lang);
+            status(document.getElementById('language-status'), t('language_switch_success') + (lang === 'zh' ? '中文' : 'English'), 'success');
+            await refresh();
+          } catch (e) {
+            status(document.getElementById('language-status'), friendlyError(e.message || String(e)), 'error');
+          } finally {
+            busy = false;
+            updateControls();
+          }
+        });
+      });
+
+      // ========== 更多播放功能 ==========
+      const playModeRadios = document.querySelectorAll('input[name="play-mode-radio"]');
+      const savePlayModeBtn = document.getElementById('save-play-mode');
+      const playModeStatus = document.getElementById('play-mode-status');
+      const playModeInfo = document.getElementById('play-mode-info');
+
+      async function loadPlayModeStatus() {
+        try {
+          const out = await controlCommand('play-mode-get');
+          const mode = out.trim();
+          document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => {
+            r.checked = r.value === mode;
+          });
+          const statusOut = await controlCommand('status');
+          const current = props(statusOut);
+          const disabled = current.module_disabled === 'yes';
+          const count = parseInt(current.available_animations) || 0;
+          playModeInfo.textContent = '动画池：' + count + ' 个动画可用' + (count < 2 ? '（需要至少 2 个动画）' : '');
+          if (disabled) {
+            playModeStatus.textContent = '⚠️ 覆盖功能已禁用，请先启用覆盖功能';
+            playModeStatus.style.color = '#ffb4ad';
+            document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => r.disabled = true);
+            savePlayModeBtn.disabled = true;
+          } else {
+            playModeStatus.textContent = '✅ 覆盖功能已启用';
+            playModeStatus.style.color = '#9ad7a5';
+            document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => r.disabled = false);
+            savePlayModeBtn.disabled = false;
+          }
+        } catch (_) {}
+      }
+
+      savePlayModeBtn.addEventListener('click', async () => {
+        if (busy) return;
+        let selected = document.querySelector('input[name="play-mode-radio"]:checked');
+        if (!selected) return;
+        const mode = selected.value;
+        const modeNames = { off: t('play_mode_off'), random: t('play_mode_random'), sequential: t('play_mode_sequential') };
+        busy = true;
+        try {
+          const result = await controlCommand('play-mode-set', mode);
+          if (!isOk(result)) throw new Error(result || '保存失败');
+          status(el.libraryStatus, t('play_mode_saved') + modeNames[mode] + '，请重启设备生效', 'success');
+        } catch (e) {
+          status(el.libraryStatus, friendlyError(e.message || String(e)), 'error');
+        } finally {
+          busy = false;
+          updateControls();
+        }
+      });
+
+      // ========== 导入功能 ==========
+      async function resetDefault() {
+        if (busy) return;
+        busy = true; updateControls(); status(el.libraryStatus, "正在恢复默认动画…"); await paint();
+        try {
+          const result = await controlCommand("reset");
+          if (!isOk(result)) throw new Error(result || "恢复失败");
+          await refresh();
+          status(el.libraryStatus, "已恢复默认动画（MIUI粒子效果），请重启设备。", "success");
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function choose(entry) {
+        if (busy) return;
+        if (entry.active) { status(el.libraryStatus, "这个动画已经是当前使用的动画。", "error"); return; }
+        busy = true; updateControls(); status(el.libraryStatus, "正在应用 “" + displayName(entry.path) + "”…"); await paint();
+        try {
+          const result = await controlCommand("select", entry.id);
+          if (!isOk(result)) throw new Error(result || "应用失败");
+          await refresh();
+          status(el.libraryStatus, "当前生效动画已切换为 “" + displayName(entry.path) + "”（重启后生效），其他动画文件未改动。", "success");
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      function renderStorage(files) {
+        el.storageList.replaceChildren();
+        if (!files.length) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "没有找到 zip 文件，请先把动画放到“下载”或 /sdcard 目录。"; el.storageList.append(empty); return;
+        }
+        files.forEach(path => {
+          const item = document.createElement("div"); item.className = "item";
+          const copy = document.createElement("div"); copy.className = "copy";
+          const name = document.createElement("div"); name.className = "name"; name.textContent = displayName(path); name.title = path;
+          copy.append(name);
+          const button = document.createElement("button"); button.type = "button"; button.textContent = "导入"; button.disabled = busy;
+          button.addEventListener("click", () => importPath(path));
+          item.append(copy, button); el.storageList.append(item);
+        });
+      }
+
+      async function scanStorage() {
+        if (busy) return;
+        busy = true; updateControls(); status(el.importStatus, "正在扫描手机存储…"); await paint();
+        const found = new Map();
+        try {
+          for (const dir of STORAGE_DIRS) {
+            const out = await command("ls -1 " + shellQuote(dir) + "/*.zip 2>/dev/null");
+            out.split(/\r?\n/).forEach(line => {
+              line = line.trim();
+              if (line.endsWith(".zip") && line.startsWith("/") && !/hyperosbootanim-[^/]*\.zip$/.test(line)) {
+                const base = line.split("/").pop();
+                if (!found.has(base)) found.set(base, line);
+              }
+            });
+          }
+          storageFiles = [...found.values()].sort();
+          renderStorage(storageFiles);
+          el.storageHint.textContent = storageFiles.length ? "找到 " + storageFiles.length + " 个 zip，点“导入”即可。" : "没有找到 zip。";
+        } catch (error) { status(el.importStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function pollImport() {
+        for (let i = 0; i < 180; i++) {
+          await sleep(1000);
+          const out = await controlCommand("status");
+          if (props(out).import_busy !== "yes") return;
+        }
+        throw new Error("导入超时，请查看模块 var/logs 目录下的日志。");
+      }
+
+      async function importPathInner(path) {
+        await command("nohup " + control("import-local", path) + " >/dev/null 2>&1 &");
+        await pollImport();
+        const result = await command("cat " + shellQuote(moduleDir + "/var/state/last-import.txt") + " 2>/dev/null");
+        if (isOk(result)) {
+          await refresh();
+          return "已导入动画库：" + result.replace(/^[\s\S]*?OK stored=/, "") + "。点“使用此动画”切换，切换后重启生效。";
+        }
+        throw new Error((result && result.trim()) || "导入失败，请确认文件是有效的 bootanimation zip。");
+      }
+
+      async function importPath(path) {
+        if (busy) return;
+        if (!path) { status(el.importStatus, "请先选择或输入 zip 文件路径。", "error"); return; }
+        busy = true; updateControls(); status(el.importStatus, "正在导入 “" + displayName(path) + "”…（大文件需要一点时间）"); await paint();
+        try {
+          const message = await importPathInner(path);
+          status(el.importStatus, message, "success");
+        } catch (error) { status(el.importStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function resumeImport() {
+        busy = true; updateControls(); status(el.importStatus, "检测到导入仍在进行，正在等待完成…"); await paint();
+        try {
+          await pollImport();
+          const result = await command("cat " + shellQuote(moduleDir + "/var/state/last-import.txt") + " 2>/dev/null");
+          if (isOk(result)) {
+            await refresh();
+            status(el.importStatus, "已导入动画库：" + result.replace(/^[\s\S]*?OK stored=/, "") + "。点“使用此动画”切换，切换后重启生效。", "success");
+          } else {
+            status(el.importStatus, (result && result.trim()) || "上一次导入失败，请重试。", "error");
+          }
+        } catch (error) { status(el.importStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      const readBuffer = blob => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(reader.error || new Error("读取文件失败")); reader.onload = () => resolve(reader.result); reader.readAsArrayBuffer(blob); });
+      function base64(buffer) { const data = new Uint8Array(buffer); let text = ""; for (let index = 0; index < data.length; index++) text += String.fromCharCode(data[index]); return btoa(text); }
+      function safeName(name) { const stem = name.replace(/\.zip$/i, "").replace(/[\\/]+/g, "_").replace(/\.\.+/g, "_").replace(/[\u0000-\u001f\u007f]+/g, "_").replace(/^[._-]+|[._-]+$/g, "").slice(0, 72); return (stem || "bootanimation") + ".zip"; }
+
+      async function writeViaStream(file, staged) {
+        const stream = window.ksu.fileOutputStream();
+        const streamId = await Promise.resolve(stream.open(staged, false));
+        if (!streamId) throw new Error("无法创建上传文件。");
+        try {
+          for (let offset = 0; offset < file.size; offset += CHUNK) {
+            const chunk = file.slice(offset, Math.min(offset + CHUNK, file.size));
+            if (!await Promise.resolve(stream.write(streamId, base64(await readBuffer(chunk))))) throw new Error("写入动画包失败。");
+            el.pickProgress.value = Math.round(((offset + chunk.size) / file.size) * 100);
+          }
+          if (!await Promise.resolve(stream.flush(streamId)) || !await Promise.resolve(stream.close(streamId))) throw new Error("无法完成上传文件写入。");
+        } catch (error) {
+          try { stream.close(streamId); } catch (_) { }
+          throw error;
+        }
+      }
+
+      async function writeViaExec(file, staged) {
+        await command(": > " + shellQuote(staged) + "; chmod 0666 " + shellQuote(staged) + " 2>/dev/null");
+        for (let offset = 0; offset < file.size; offset += CHUNK) {
+          const chunk = file.slice(offset, Math.min(offset + CHUNK, file.size));
+          const b64 = base64(await readBuffer(chunk));
+          await command("echo '" + b64 + "' | base64 -d >> " + shellQuote(staged));
+          el.pickProgress.value = Math.round(((offset + chunk.size) / file.size) * 100);
+        }
+        const written = (await command("wc -c < " + shellQuote(staged))).trim();
+        if (String(written) !== String(file.size)) throw new Error("写入大小不一致（" + written + "/" + file.size + "），请改用“扫描手机存储”导入。");
+      }
+
+      async function findStoragePath(name, size) {
+        const dirs = STORAGE_DIRS.map(shellQuote).join(" ");
+        const cmd = "for d in " + dirs + "; do for f in \"$d\"/*.zip; do [ -f \"$f\" ] || continue; if [ \"$(basename \"$f\")\" = " + shellQuote(name) + " ] && [ \"$(wc -c < \"$f\" 2>/dev/null)\" = " + shellQuote(String(size)) + " ]; then printf '%s\\n' \"$f\"; exit 0; fi; done; done; exit 1";
+        const out = await command(cmd);
+        const line = out.trim();
+        return line && line.startsWith("/") ? line : null;
+      }
+
+      async function pickImport() {
+        if (!chosenFile || busy) return;
+        if (!/\.zip$/i.test(chosenFile.name)) { status(el.importStatus, "请选择 .zip 格式的动画压缩包。", "error"); return; }
+        const staged = moduleDir + "/var/tmp/upload-" + Date.now() + "-" + Math.floor(Math.random() * 1000000) + ".zip";
+        const name = displayName(chosenFile.name);
+        busy = true; updateControls(); el.pickProgress.hidden = false; el.pickProgress.value = 0;
+        status(el.importStatus, "正在定位 “" + name + "”…"); await paint();
+        try {
+          const storagePath = chosenFile.path && chosenFile.path.startsWith("/") ? chosenFile.path : await findStoragePath(chosenFile.name, chosenFile.size);
+          if (storagePath) {
+            status(el.importStatus, "已找到文件，正在快速导入…"); await paint();
+            const message = await importPathInner(storagePath);
+            chosenFile = null; el.pickZip.value = ""; el.pickName.textContent = "尚未选择文件";
+            status(el.importStatus, message, "success");
+            return;
+          }
+          status(el.importStatus, "正在读取 “" + name + "”…（文件不在常见目录，走慢速通道）"); await paint();
+          if (uploadReady()) await writeViaStream(chosenFile, staged);
+          else await writeViaExec(chosenFile, staged);
+          status(el.importStatus, "正在验证并应用动画…"); await paint();
+          const result = await controlCommand("import", staged, safeName(chosenFile.name));
+          if (!isOk(result)) throw new Error(result || "导入失败");
+          chosenFile = null; el.pickZip.value = ""; el.pickName.textContent = "尚未选择文件";
+          await refresh();
+          status(el.importStatus, "已导入动画库：“" + name + "”。点“使用此动画”切换，切换后重启生效。", "success");
+        } catch (error) {
+          try { await command("rm -f " + shellQuote(staged)); } catch (_) { }
+          status(el.importStatus, friendlyError(error.message || String(error)), "error");
+        } finally {
+          busy = false; updateControls();
+          el.pickProgress.hidden = true; el.pickProgress.value = 0;
+        }
+      }
+
+      el.pickZip.addEventListener("change", event => { chosenFile = event.target.files && event.target.files[0] || null; el.pickName.textContent = chosenFile ? displayName(chosenFile.name) + " · " + bytes(chosenFile.size) : "尚未选择文件"; updateControls(); });
+      el.pickImport.addEventListener("click", pickImport);
+      el.scanStorage.addEventListener("click", scanStorage);
+      el.resetDefault.addEventListener("click", () => {
+        if (busy) return;
+        if (el.resetDefault.dataset.confirm !== "yes") {
+          el.resetDefault.dataset.confirm = "yes"; el.resetDefault.textContent = "确认恢复？";
+          setTimeout(() => { if (el.resetDefault.dataset.confirm === "yes") { el.resetDefault.dataset.confirm = ""; el.resetDefault.textContent = "恢复默认（MIUI粒子效果）"; } }, 3000);
+          return;
+        }
+        resetDefault();
+      });
+
+      // ========== 初始化 ==========
+      (async () => {
+        try {
+          const info = bridgeReady() && typeof window.ksu.moduleInfo === "function" ? window.ksu.moduleInfo() : null;
+          const parsed = typeof info === "string" ? JSON.parse(info) : info;
+          if (parsed && parsed.moduleDir) moduleDir = parsed.moduleDir;
+        } catch (_) { }
+        if (!bridgeReady()) {
+          el.current.textContent = "请在模块设置中打开此页面。";
+          status(el.libraryStatus, "模块设置接口不可用。", "error");
+          updateControls();
+          return;
+        }
+        execMode = await detectExecMode();
+        updateControls();
+        await loadLanguage();
+        await refresh();
+        await loadOverlayStatus();
+        await loadPlayModeStatus();
+        await applyLanguage(currentLang);
+        const current = props(await controlCommand("status"));
+        if (current.import_busy === "yes") resumeImport();
+      })();
+    })();
+  </script>
+</body>
+</html>
