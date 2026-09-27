@@ -1,0 +1,2609 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>启动动画设置</title>
+  <link rel="stylesheet" href="/internal/insets.css">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow" data-i18n="eyebrow">HYPEROS BOOT ANIMATION</p>
+    <h1 data-i18n="title">启动动画设置</h1>
+    <p class="muted" data-i18n="description">选择一个动画后，模块会自动把它应用为系统读取的 bootanimation.zip。更换后请重启设备。</p>
+    <p class="note" data-i18n="version">原版：Saigetsu · 二改：小雨 · 三改：9008 v2.4.0</p>
+
+    <!-- ========== 动画库 ========== -->
+    <section class="card">
+      <div class="card-head">
+        <h2 data-i18n="library_title">动画库</h2>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button id="toggle-overlay" class="secondary" style="min-height:32px;padding:0 14px;font-size:12px;" data-i18n="overlay_enabled">✅ 覆盖已启用</button>
+          <button class="secondary" id="reset-default" type="button" data-i18n="reset_default">恢复默认</button>
+        </div>
+      </div>
+      <p class="muted" id="current" data-i18n="loading">正在读取当前设置…</p>
+      <div class="library" id="library"></div>
+      <p class="status" id="library-status"></p>
+      <p class="note" data-i18n="builtin_note">内置动画不可删除；导入的动画可删除。</p>
+    </section>
+
+    <!-- ========== 状态与日志 ========== -->
+    <section class="card">
+      <details>
+        <summary data-i18n="status_title">状态与日志</summary>
+
+        <div class="log-section">
+          <h3 data-i18n="log_section_selfcheck">🔧 前端自检</h3>
+          <div class="log-sub">
+            <div id="selfcheck-grid" class="state-grid"><div class="log-empty" data-i18n="msg_selfcheck_placeholder">点击下方「开始自检」按钮检测环境</div></div>
+          </div>
+          <div class="refresh-row">
+            <button class="secondary" id="refresh-selfcheck" type="button">开始自检</button>
+          </div>
+        </div>
+
+        <div class="log-section">
+          <h3 data-i18n="log_section_state">📋 系统状态</h3>
+          <div class="log-sub">
+            <div id="state-grid" class="state-grid"><div class="log-empty" data-i18n="loading">加载中…</div></div>
+            <ul id="mount-list" class="mount-list"></ul>
+          </div>
+        </div>
+
+        <div class="log-section">
+          <h3 data-i18n="log_section_runtime">⚙️ 运行日志（仅错误）</h3>
+          <details class="log-sub"><summary>post-fs-data.log</summary><div class="log-box" id="log-post-fs-data">（无）</div></details>
+          <details class="log-sub"><summary>post-mount.log</summary><div class="log-box" id="log-post-mount">（无）</div></details>
+          <details class="log-sub"><summary>service.log</summary><div class="log-box" id="log-service">（无）</div></details>
+        </div>
+
+        <div class="log-section">
+          <h3 data-i18n="log_section_archive">🔍 校验与应用日志（仅失败）</h3>
+          <details class="log-sub"><summary>validation.log</summary><div class="log-box" id="log-validation">（无）</div></details>
+          <details class="log-sub"><summary>activate.log</summary><div class="log-box" id="log-activate">（无）</div></details>
+        </div>
+
+        <div class="log-section">
+          <h3 data-i18n="log_section_payload">📦 payload 文件</h3>
+          <details class="log-sub"><summary data-i18n="log_payload_summary">ls -l 结果</summary><div class="log-box" id="log-payload">（无）</div></details>
+        </div>
+
+        <div class="log-section">
+          <h3 data-i18n="log_section_audio">🔊 开机音频</h3>
+          <div class="log-sub">
+            <div id="audio-state-grid" class="state-grid"><div class="log-empty" data-i18n="loading">加载中…</div></div>
+          </div>
+          <details class="log-sub"><summary>audio.log</summary><div class="log-box" id="log-audio">（无）</div></details>
+        </div>
+
+        <div class="refresh-row">
+          <button class="secondary" id="refresh-logs" type="button" data-i18n="refresh_logs">刷新日志</button>
+        </div>
+      </details>
+    </section>
+
+    <!-- ========== 导入动画 ========== -->
+    <section class="card">
+      <h2 data-i18n="import_title">导入动画</h2>
+      <p class="muted" data-i18n="import_desc">用手机文件选择器直接选 zip，或先把 zip 放到"下载"目录再扫描导入。</p>
+      <p class="note" data-i18n="import_method1">方式一：手机文件选择器</p>
+      <div class="upload-row">
+        <label class="file-button" id="pick-label" for="pick-zip" data-i18n="pick_file">选择 ZIP 文件</label>
+        <input id="pick-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+        <span class="selected" id="pick-name" data-i18n="no_file">尚未选择文件</span>
+        <button class="secondary" id="pick-import" type="button" disabled data-i18n="import_btn">导入</button>
+      </div>
+      <progress id="pick-progress" value="0" max="100" hidden></progress>
+      <p class="note" data-i18n="import_hint1">提示：大文件先放到"下载"目录再扫描导入，速度更快。</p>
+      <p class="note" data-i18n="import_hint2">导入时如果名称与已有动画相同，会自动改名，不会覆盖原文件。</p>
+      <p class="note" data-i18n="import_method2">方式二：扫描手机存储</p>
+      <div class="upload-row">
+        <button type="button" id="scan-storage" data-i18n="scan_storage">扫描手机存储</button>
+        <span class="selected" id="storage-hint"></span>
+      </div>
+      <div class="library" id="storage-list"></div>
+      <p class="status" id="import-status"></p>
+    </section>
+
+    <!-- ========== 实验性功能 ========== -->
+    <section class="card">
+      <details>
+        <summary data-i18n="experimental_title">🧪 实验性功能</summary>
+
+        <!-- 更多播放功能 -->
+        <details class="log-sub" style="margin-top:12px;">
+          <summary data-i18n="more_play_title">🎬 更多播放功能</summary>
+          <div style="padding:12px;">
+            <p class="text-muted" data-i18n="more_play_hint">💡 需要先启用「覆盖功能」才能使用</p>
+            <div id="play-mode-status" style="padding:8px 12px;margin:8px 0;border-radius:8px;background:var(--log-bg);font-size:13px;color:var(--text-secondary);"><span data-i18n="checking">🔍 正在检测覆盖状态…</span></div>
+            <div class="radio-group">
+              <label><input type="radio" name="play-mode-radio" value="off" checked> <span data-i18n="play_off">⏹ 关闭（使用固定动画）</span></label>
+              <label><input type="radio" name="play-mode-radio" value="random"> <span data-i18n="play_random">🎲 随机播放</span></label>
+              <label><input type="radio" name="play-mode-radio" value="sequential"> <span data-i18n="play_sequential">🔄 顺序轮换</span></label>
+            </div>
+            <div id="play-mode-info" style="padding:8px 12px;margin:8px 0;border-radius:8px;background:var(--log-bg);font-size:13px;color:var(--text-secondary);"><span data-i18n="play_pool">动画池：加载中…</span></div>
+            <button id="save-play-mode" class="secondary btn-block" disabled data-i18n="save_mode">保存模式</button>
+            <p class="text-muted mt-8"><span data-i18n="reboot_hint">⚠️ 修改后需要重启设备才能生效</span></p>
+          </div>
+        </details>
+
+        <!-- 改分辨率 -->
+        <details class="log-sub" style="margin-top:12px;">
+          <summary data-i18n="desc_title">✏️ 改分辨率</summary>
+          <div style="padding:12px;">
+
+            <h3 data-i18n="desc_create_title" style="margin:0 0 10px;font-size:14px;color:var(--eyebrow);">➕ 创建配置</h3>
+
+            <div class="form-row">
+              <label data-i18n="desc_config_name">配置名</label>
+              <input type="text" id="desc-config-name" placeholder="例如：1440p">
+            </div>
+
+            <div class="form-row">
+              <label data-i18n="desc_resolution">分辨率</label>
+              <div class="resolution">
+                <input type="number" id="desc-width" placeholder="1080" min="1" max="99999">
+                <span class="times">×</span>
+                <input type="number" id="desc-height" placeholder="2400" min="1" max="99999">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label data-i18n="desc_fps">帧率</label>
+              <input type="number" id="desc-fps" placeholder="30" min="1" max="240">
+            </div>
+
+            <div class="form-row">
+              <label data-i18n="desc_format">格式</label>
+              <div class="radio-group inline">
+                <label><input type="radio" name="desc-format" value="standard" checked> <span data-i18n="desc_format_standard">常规</span></label>
+                <label><input type="radio" name="desc-format" value="oneplus"> <span data-i18n="desc_format_oneplus">欧加</span></label>
+              </div>
+            </div>
+
+            <div id="desc-offset-rows" class="hidden">
+              <div class="form-row">
+                <label data-i18n="desc_offset_x">X 偏移</label>
+                <input type="number" id="desc-offset-x" placeholder="0" min="0" max="99999">
+              </div>
+              <div class="form-row">
+                <label data-i18n="desc_offset_y">Y 偏移</label>
+                <input type="number" id="desc-offset-y" placeholder="0" min="0" max="99999">
+              </div>
+            </div>
+
+            <div class="upload-row">
+              <button type="button" class="secondary" id="desc-read-original" data-i18n="desc_read_original">读取原始值</button>
+              <button type="button" id="desc-save-config" data-i18n="desc_save_config">保存配置</button>
+            </div>
+            <p class="status" id="desc-create-status"></p>
+
+            <h3 data-i18n="desc_config_list" style="margin:20px 0 10px;font-size:14px;color:var(--eyebrow);">📋 配置列表</h3>
+            <div class="library" id="desc-config-list"></div>
+            <p class="status" id="desc-config-status"></p>
+
+            <h3 data-i18n="desc_modified_title" style="margin:20px 0 10px;font-size:14px;color:var(--eyebrow);">🔧 已修改动画</h3>
+            <div class="library" id="desc-modified-list"></div>
+            <p class="status" id="desc-modified-status"></p>
+
+            <div class="upload-row">
+              <button type="button" class="secondary" id="desc-restore-btn" data-i18n="desc_restore">恢复备份</button>
+              <button type="button" class="secondary danger" id="desc-undo-btn" data-i18n="desc_undo">撤销上次修改</button>
+            </div>
+
+            <div class="result-box hidden" id="desc-result"></div>
+
+          </div>
+        </details>
+
+        <!-- 导入开机音频 -->
+        <details class="log-sub" style="margin-top:12px;">
+          <summary data-i18n="audio_title">🔊 导入开机音频</summary>
+          <div style="padding:12px;">
+
+            <p class="text-muted" data-i18n="audio_hint">非 WAV 格式会自动转，转不了会提示你。</p>
+
+            <div class="form-row">
+              <label data-i18n="audio_file_label">音频文件</label>
+              <div class="resolution">
+                <input type="text" id="audio-path" placeholder="/sdcard/Download/boot.wav" autocomplete="off" spellcheck="false" style="overflow-x:auto;text-overflow:clip;">
+                <label class="file-button" for="audio-pick" data-i18n="audio_pick">选择</label>
+                <input id="audio-pick" type="file" accept="audio/*,.wav,.mp3,.ogg,.m4a,.flac">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label data-i18n="audio_skip_check">跳过检查</label>
+              <div class="radio-group inline">
+                <label><input type="checkbox" id="audio-skip-check"> <span data-i18n="audio_skip_check_hint">不预先校验，更快</span></label>
+              </div>
+            </div>
+
+            <div class="upload-row">
+              <button type="button" class="secondary" id="audio-scan" data-i18n="audio_scan">扫描手机存储</button>
+            </div>
+            <div class="library" id="audio-storage-list"></div>
+
+            <div class="form-row">
+              <label data-i18n="audio_android_label">安卓版本</label>
+              <div class="radio-group inline">
+                <label><input type="radio" name="audio-android" value="9plus" checked> <span data-i18n="audio_android_9plus">Android 9+</span></label>
+                <label><input type="radio" name="audio-android" value="9minus"> <span data-i18n="audio_android_9minus">≤ Android 9</span></label>
+                <label class="radio-full"><input type="radio" name="audio-android" value="miui"> <span data-i18n="audio_android_miui">仅MIUI</span></label>
+              </div>
+            </div>
+
+            <div class="upload-row">
+              <button type="button" id="audio-import" data-i18n="audio_import" disabled>导入</button>
+            </div>
+
+            <div class="upload-row">
+              <button type="button" class="secondary danger" id="audio-remove-all" data-i18n="audio_remove_all">删除所有音频</button>
+            </div>
+
+            <progress id="audio-progress" value="0" max="100" hidden></progress>
+            <p class="status" id="audio-status"></p>
+
+          </div>
+        </details>
+
+      </details>
+    </section>
+
+    <!-- ========== 语言与外观 ========== -->
+    <section class="card">
+      <details>
+        <summary data-i18n="theme_title">🌐 语言与外观</summary>
+        <div style="padding:10px 0 0;">
+
+          <h3 style="margin:0 0 8px;font-size:14px;color:var(--eyebrow);" data-i18n="language_label">语言</h3>
+          <div class="radio-group inline">
+            <label><input type="radio" name="language-radio" value="zh"> <span data-i18n="lang_zh">🇨🇳 简体中文</span></label>
+            <label><input type="radio" name="language-radio" value="en"> <span data-i18n="lang_en">🇬🇧 English</span></label>
+          </div>
+          <p id="language-status" class="status"></p>
+
+          <h3 style="margin:16px 0 8px;font-size:14px;color:var(--eyebrow);" data-i18n="theme_label">主题</h3>
+          <div class="radio-group inline">
+            <label><input type="radio" name="theme-radio" value="light"> <span data-i18n="theme_light">二版二改</span></label>
+            <label><input type="radio" name="theme-radio" value="dark"> <span data-i18n="theme_dark">一版二改</span></label>
+          </div>
+          <p class="note" data-i18n="theme_hint">💡 切换后立即生效</p>
+
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <!-- 悬浮刷新按钮 -->
+  <button id="float-refresh" type="button" class="float-refresh" title="刷新界面">
+    <span class="float-refresh-icon">↻</span>
+  </button>
+
+  <!-- ========== 弹窗 ========== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">—</h3>
+        <p class="modal-sub" id="modal-sub"></p>
+      </div>
+      <div class="modal-body">
+        <div class="modal-select-row">
+          <button type="button" class="secondary" id="modal-select-all" data-i18n="modal_select_all">全选</button>
+          <button type="button" class="secondary" id="modal-select-none" data-i18n="modal_select_none">全不选</button>
+        </div>
+        <label class="modal-item" id="modal-force-row" style="margin-bottom:10px;display:none;">
+          <input type="checkbox" id="modal-force">
+          <span class="modal-name" data-i18n="desc_force_label">强制覆盖（忽略格式检查）</span>
+        </label>
+        <div id="modal-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="secondary" id="modal-cancel" data-i18n="modal_cancel">取消</button>
+        <button type="button" id="modal-confirm" data-i18n="modal_confirm">确认</button>
+      </div>
+    </div>
+  </div>
+  <!-- 主题切换遮罩 -->
+  <div class="theme-ripple-black" id="theme-ripple-black" style="display:none;">
+    <div class="theme-ripple-circle" id="theme-ripple-circle"></div>
+  </div>
+
+  <div class="theme-ripple-white" id="theme-ripple-white" style="display:none;">
+    <div class="theme-white-circle"></div>
+  </div>
+  <script>
+    (() => {
+      "use strict";
+
+      // ============================================================
+      // i18n
+      // ============================================================
+      const i18n = {
+        zh: {
+          eyebrow_hyperos: 'HYPEROS BOOT ANIMATION',
+          eyebrow_coloros: 'COLOROS BOOT ANIMATION',
+          title: '启动动画设置',
+          description: '选择一个动画后，模块会自动把它应用为系统读取的 bootanimation.zip。更换后请重启设备。',
+          version: '原版：Saigetsu · 二改：小雨 · 三改：9008 v2.4.0',
+          library_title: '动画库',
+          overlay_enabled: '✅ 覆盖已启用',
+          overlay_disabled: '⛔ 覆盖已禁用',
+          reset_default: '恢复默认',
+          builtin_note: '内置动画不可删除；导入的动画可删除。',
+          loading: '加载中…',
+          status_title: '状态与日志',
+          log_section_selfcheck: '🔧 前端自检',
+          refresh_selfcheck: '开始自检',
+          selfcheck_rerun: '重新自检',
+          selfcheck_running: '检测中…',
+          log_section_state: '📋 系统状态',
+          log_section_runtime: '⚙️ 运行日志（仅错误）',
+          log_section_archive: '🔍 校验与应用日志（仅失败）',
+          log_section_payload: '📦 payload 文件',
+          log_section_audio: '🔊 开机音频',
+          refresh_logs: '刷新日志',
+          no_error: '（无）',
+          import_title: '导入动画',
+          import_desc: '用手机文件选择器直接选 zip，或先把 zip 放到"下载"目录再扫描导入。',
+          import_method1: '方式一：手机文件选择器',
+          pick_file: '选择 ZIP 文件',
+          no_file: '尚未选择文件',
+          import_btn: '导入',
+          import_hint1: '提示：大文件先放到"下载"目录再扫描导入，速度更快。',
+          import_hint2: '导入时如果名称与已有动画相同，会自动改名，不会覆盖原文件。',
+          import_method2: '方式二：扫描手机存储',
+          scan_storage: '扫描手机存储',
+          experimental_title: '🧪 实验性功能',
+          more_play_title: '🎬 更多播放功能',
+          more_play_hint: '💡 需要先启用「覆盖功能」才能使用',
+          checking: '🔍 正在检测覆盖状态…',
+          play_off: '⏹ 关闭（使用固定动画）',
+          play_random: '🎲 随机播放',
+          play_sequential: '🔄 顺序轮换',
+          play_pool: '动画池：加载中…',
+          save_mode: '保存模式',
+          reboot_hint: '⚠️ 修改后需要重启设备才能生效',
+          language_title: '🌐 语言与外观',
+          language_label: '语言',
+          language_hint: '💡 切换后若文本未改请重新进入模块界面',
+          lang_zh: '🇨🇳 简体中文',
+          lang_en: '🇬🇧 English',
+          theme_title: '🌐 语言与外观',
+          theme_label: '主题',
+          theme_light: '二版二改',
+          theme_dark: '一版二改',
+          theme_hint: '💡 切换后立即生效',
+          language_switch_success: '✅ 已切换至 ',
+          play_mode_saved: '✅ 播放模式已保存为 ',
+          play_mode_off: '关闭',
+          play_mode_random: '随机播放',
+          play_mode_sequential: '顺序轮换',
+          toggle_overlay_disable_hint: '禁用后模块将不再自动覆盖开机动画，你可以自行替换系统动画文件。',
+          toggle_overlay_enable_hint: '启用后模块将恢复自动覆盖开机动画。',
+          toggle_overlay_disable: '禁用',
+          toggle_overlay_enable: '启用',
+          // 改分辨率
+          desc_title: '✏️ 改分辨率',
+          desc_create_title: '➕ 创建配置',
+          desc_config_name: '配置名',
+          desc_resolution: '分辨率',
+          desc_width: '宽',
+          desc_height: '高',
+          desc_fps: '帧率',
+          desc_format: '格式',
+          desc_format_standard: '常规',
+          desc_format_oneplus: '欧加',
+          desc_offset_x: 'X 偏移',
+          desc_offset_y: 'Y 偏移',
+          desc_read_original: '读取原始值',
+          desc_save_config: '保存配置',
+          desc_config_list: '📋 配置列表',
+          desc_modified_title: '🔧 已修改动画',
+          desc_restore: '恢复备份',
+          desc_undo: '撤销上次修改',
+          desc_apply: '应用',
+          desc_delete: '删除',
+          desc_confirm_delete: '确认删除？',
+          desc_original_missing: '原厂备份不存在，无法读取',
+          desc_original_loaded: '✅ 已读取原厂值：',
+          desc_config_saved: '✅ 配置已保存：',
+          desc_config_name_exists: '配置名已存在，请换一个',
+          desc_config_name_invalid: '配置名无效（只允许中文、英文、数字、下划线、连字符）',
+          desc_config_deleted: '✅ 已删除配置：',
+          desc_config_empty: '暂无配置，请先创建一个。',
+          desc_modified_empty: '暂无已修改的动画。',
+          desc_apply_title: '应用配置',
+          desc_restore_title: '恢复备份',
+          desc_modal_apply_sub: '选择要应用此配置的动画（多选）',
+          desc_modal_restore_sub: '选择要恢复备份的动画（多选）',
+          modal_select_all: '全选',
+          modal_select_none: '全不选',
+          modal_cancel: '取消',
+          modal_confirm: '确认',
+          desc_modal_select_all: '全选',
+          desc_modal_select_none: '全不选',
+          desc_modal_cancel: '取消',
+          desc_modal_confirm: '确认应用',
+          desc_modal_confirm_restore: '确认恢复',
+          desc_apply_success: '✅ 已应用配置：',
+          desc_apply_summary_success: '成功',
+          desc_apply_summary_skip: '跳过',
+          desc_apply_no_selection: '请至少选择一个动画',
+          desc_restore_success: '✅ 已恢复备份：',
+          desc_restore_no_selection: '请至少选择一个动画',
+          desc_undo_confirm: '确定要撤销上次修改吗？\n\n这会恢复上次改分辨率操作涉及的所有动画的 desc.txt。',
+          desc_undo_success: '✅ 已撤销上次修改',
+          desc_undo_none: '没有可撤销的操作',
+          desc_restore_confirm: '确定要恢复所选动画的 desc.txt 备份吗？',
+          desc_force_label: '强制覆盖（忽略格式检查）',
+          desc_force_hint: '⚠️ 强制覆盖会把所选动画的 desc.txt 按配置格式重写，即使格式不匹配。',
+          desc_fill_required: '请填写完整的宽/高/帧率',
+          desc_offset_required: '欧加格式需要填写 X/Y 偏移',
+          audio_title: '🔊 导入开机音频',
+          audio_hint: '非 WAV 格式会自动转，转不了会提示你。',
+          audio_file_label: '音频文件',
+          audio_pick: '选择',
+          audio_scan: '扫描手机存储',
+          audio_skip_check: '跳过检查',
+          audio_skip_check_hint: '不预先校验，更快',
+          audio_android_label: '安卓版本',
+          audio_android_9plus: 'Android 9+',
+          audio_android_9minus: '≤ Android 9',
+          audio_android_miui: '仅MIUI',
+          audio_import: '导入',
+          audio_modal_title: '选择要导入音频的动画',
+          audio_modal_sub: '音频将内嵌到所选动画（Android 9+）或挂载到系统（≤ Android 9）',
+          audio_no_file: '请先选择音频文件',
+          audio_no_selection: '请至少选择一个动画',
+          audio_converting: '正在转换为 WAV…',
+          audio_uploading: '正在上传音频…',
+          audio_importing: '正在导入到动画…',
+          audio_success: '✅ 音频导入完成',
+          audio_fail: '音频导入失败',
+          audio_remove_all: '删除所有音频',
+          audio_remove_confirm: '确认删除？',
+          audio_remove_success: '✅ 已删除所有音频',
+          audio_status_label: '状态',
+          audio_file_label_short: '文件',
+          audio_size_label: '大小',
+          audio_mode_label: '模式',
+          audio_sdk_label: 'SDK',
+          audio_valid_label: '有效',
+          audio_mounted_label: '已挂载',
+          audio_present_yes: '已导入',
+          audio_present_no: '未导入',
+          audio_yes: '是',
+          audio_no: '否',
+          audio_mode_9plus: 'Android 9+ 内嵌',
+          audio_mode_9minus: '≤ Android 9 挂载',
+          audio_mode_miui: '仅MIUI (system/product/media)',
+          audio_empty: '未导入音频',
+          // === 调试面板 ===
+          sc_channel: '上传通道',
+          sc_channel_stream: '✅ 流式（快）',
+          sc_channel_base64: '⚠️ base64 回退（慢）',
+          sc_echo: 'echo 测试',
+          sc_status: 'status 测试',
+          sc_tool_status: 'tool-status',
+          sc_i18n_integrity: 'i18n 完整性',
+          sc_i18n_missing: 'i18n 疑似漏翻',
+          sc_ok: '✅ OK',
+          sc_fail: '❌ 失败',
+          sc_empty: '❌ 空',
+          sc_not_installed: '❌ 未安装',
+          sc_read_failed: '❌ 读取失败',
+          sc_upload_label: '上传通道',
+
+          ss_stage: '阶段',
+          ss_timestamp: '时间',
+          ss_android_release: '安卓版本',
+          ss_sdk: 'SDK',
+          ss_brand: '品牌',
+          ss_theme: '主题',
+          ss_language: '语言',
+          ss_hyperos_version: 'HyperOS 版本',
+          ss_hyperos_incremental: 'HyperOS 增量版本',
+          ss_product_bootanim_property: '开机动画属性',
+          ss_selected_source: '当前动画来源',
+          ss_payload_present: 'payload 存在',
+          ss_payload_size: 'payload 大小',
+          ss_module_disabled: '模块已禁用',
+          ss_import_busy: '导入进行中',
+          ss_available_animations: '可用动画数',
+          ss_overlay_tree_current: '覆盖树当前有效',
+          ss_overlay_tree_meta: '覆盖树指纹',
+          ss_play_mode: '播放模式',
+          ss_last_import: '上次导入',
+          ss_no_state: '⚠️ 无法获取系统状态（status 返回空）',
+          sc_i18n_all_aligned: ' 个 key 完全对齐',
+          // === 运行时提示 ===
+          msg_lib_empty: '动画库为空，请先导入一个 zip。',
+          msg_badge_active: '当前使用',
+          msg_btn_applied: '已应用',
+          msg_btn_use: '使用此动画',
+          msg_btn_confirm_switch: '确认切换？',
+          msg_already_active: '这个动画已经是当前使用的动画。',
+          msg_switch_hint: '再点一次将把当前生效动画切换为 “{name}”（重启后生效）。',
+          msg_btn_delete: '删除',
+          msg_btn_confirm_delete: '确认删除？',
+          msg_last_anim: '注意：这是最后一个动画，删除后动画库将为空。再点一次“确认删除？”执行。',
+          msg_deleting: '正在删除 “{name}”…',
+          msg_deleted: '已删除 “{name}”。',
+          msg_applying: '正在应用 “{name}”…',
+          msg_applied_ok: '当前生效动画已切换为 “{name}”（重启后生效）。',
+          msg_resetting: '正在恢复默认动画…',
+          msg_reset_ok: '已恢复默认动画，请重启设备。',
+          msg_overlay_doing: '正在{action}覆盖功能…',
+          msg_overlay_done: '✅ 已{action}覆盖功能，请重启设备生效',
+          msg_confirm_overlay: '确定要{action}开机动画覆盖功能吗？\n\n{hint}',
+          msg_no_zip: '没有找到 zip 文件，请先把动画放到“下载”或 /sdcard 目录。',
+          msg_btn_import: '导入',
+          msg_scanning: '正在扫描手机存储…',
+          msg_scan_found_zip: '找到 {n} 个 zip，点“导入”即可。',
+          msg_scan_empty_zip: '没有找到 zip。',
+          msg_import_timeout: '导入超时，请查看模块 var/logs 目录下的日志。',
+          msg_imported: '已导入动画库：{name}。点“使用此动画”切换，切换后重启生效。',
+          msg_import_fail: '导入失败，请确认文件是有效的 bootanimation zip。',
+          msg_pick_path: '请先选择或输入 zip 文件路径。',
+          msg_importing: '正在导入 “{name}”…（大文件需要一点时间）',
+          msg_import_wait: '检测到导入仍在进行，正在等待完成…',
+          msg_import_retry: '上一次导入失败，请重试。',
+          msg_pick_zip_only: '请选择 .zip 格式的动画压缩包。',
+          msg_locating: '正在定位 “{name}”…',
+          msg_fast_import: '已找到文件，正在快速导入…',
+          msg_slow_import: '正在读取 “{name}”…（文件不在常见目录，走慢速通道）',
+          msg_validating: '正在验证并应用动画…',
+          msg_imported_short: '已导入动画库：“{name}”。',
+          msg_checking_file: '正在检查文件…',
+          msg_file_missing: '文件不存在或不可读：{path}',
+          msg_no_audio: '没有找到音频文件，请先把音频放到下载目录。',
+          msg_btn_fill: '填入',
+          msg_btn_confirm_short: '确认？',
+          msg_audio_deleted: '已删除：{path}',
+          msg_audio_filled: '已填入：{path}',
+          msg_scan_audio_found: '找到 {n} 个音频，点一下“填入”即可。',
+          msg_scan_audio_empty: '没找到音频文件。',
+          msg_delete_fail: '删除失败',
+          msg_removing_audio: '正在删除所有音频…',
+          msg_no_audio_to_remove: '没有找到需要删除的音频',
+          msg_copying_audio: '正在复制音频…',
+          msg_copy_audio_fail: '复制音频失败',
+          msg_no_audio_source: '没有可用的音频来源',
+          msg_audio_removed_n: '✅ 已删除 {n} 项：',
+          msg_refreshed: '✅ 已刷新',
+          msg_open_in_manager: '请在模块设置中打开此页面。',
+          msg_bridge_unavailable: '模块设置接口不可用。',
+          msg_err_generic: '操作失败，请重试',
+          msg_err_invalid_zip: '不是有效的开机动画 zip（需要是 ZIP 格式，且根目录包含 desc.txt）',
+          msg_err_not_zip: '不是有效的 zip 文件',
+          msg_err_not_found: '找不到该文件或动画，请重新选择',
+          msg_err_format_mismatch: '格式不匹配',
+          msg_err_unknown_format: '无法识别 desc.txt 格式',
+          msg_unknown_anim: '未知动画',
+          msg_unknown_size: '未知大小',
+          msg_selfchecking: '正在自检…',
+          msg_selfcheck_done: '✅ 自检完成',
+          msg_selfcheck_fail: '自检失败：{err}',
+          msg_saved_reboot: '，请重启设备生效',
+          msg_payload_info: '{size} · 共 {n} 个可选',
+          msg_importing_status: ' · 正在导入中…',
+          msg_selfcheck_placeholder: '点击下方「开始自检」按钮检测环境',
+          log_payload_summary: 'ls -l 结果',
+        },
+        en: {
+          eyebrow_hyperos: 'HYPEROS BOOT ANIMATION',
+          eyebrow_coloros: 'COLOROS BOOT ANIMATION',
+          title: 'Boot Animation Settings',
+          description: 'Select an animation and the module will automatically apply it as bootanimation.zip. Reboot to take effect.',
+          version: 'Original: Saigetsu · Mod: Xiaoyu · ReMod: 9008 v2.4.0',
+          library_title: 'Animation Library',
+          overlay_enabled: '✅ Overlay Enabled',
+          overlay_disabled: '⛔ Overlay Disabled',
+          reset_default: 'Reset Default',
+          builtin_note: 'Built-in animations cannot be deleted; imported animations can be deleted.',
+          loading: 'Loading…',
+          status_title: 'Status & Logs',
+          log_section_selfcheck: '🔧 Frontend Self-check',
+          refresh_selfcheck: 'Run Self-check',
+          selfcheck_rerun: 'Re-run Self-check',
+          selfcheck_running: 'Checking…',
+          log_section_state: '📋 System State',
+          log_section_runtime: '⚙️ Runtime Logs (Errors Only)',
+          log_section_archive: '🔍 Validation & Activation Logs (Failures Only)',
+          log_section_payload: '📦 Payload Files',
+          log_section_audio: '🔊 Boot Audio',
+          refresh_logs: 'Refresh Logs',
+          no_error: '(none)',
+          import_title: 'Import Animation',
+          import_desc: 'Select a ZIP file directly, or put it in "Download" folder and scan.',
+          import_method1: 'Method 1: File Picker',
+          pick_file: 'Select ZIP File',
+          no_file: 'No file selected',
+          import_btn: 'Import',
+          import_hint1: 'Tip: Put large files in "Download" folder and scan for faster import.',
+          import_hint2: 'If name conflicts, it will be renamed, original file not overwritten.',
+          import_method2: 'Method 2: Scan Storage',
+          scan_storage: 'Scan Storage',
+          experimental_title: '🧪 Experimental Features',
+          more_play_title: '🎬 More Play Modes',
+          more_play_hint: '💡 Overlay must be enabled to use this',
+          checking: '🔍 Checking overlay status…',
+          play_off: '⏹ Off (fixed animation)',
+          play_random: '🎲 Random',
+          play_sequential: '🔄 Sequential',
+          play_pool: 'Animation pool: Loading…',
+          save_mode: 'Save Mode',
+          reboot_hint: '⚠️ Reboot required after modifying',
+          language_title: '🌐 Language & Appearance',
+          language_label: 'Language',
+          language_hint: '💡 If text not changed, please re-enter module interface',
+          lang_zh: '🇨🇳 Chinese (Simplified)',
+          lang_en: '🇬🇧 English',
+          theme_title: '🌐 Language & Appearance',
+          theme_label: 'Theme',
+          theme_light: '二版二改',
+          theme_dark: '一版二改',
+          theme_hint: '💡 Takes effect immediately',
+          language_switch_success: '✅ Switched to ',
+          play_mode_saved: '✅ Play mode saved: ',
+          play_mode_off: 'Off',
+          play_mode_random: 'Random',
+          play_mode_sequential: 'Sequential',
+          toggle_overlay_disable_hint: 'After disabling, the module will no longer auto-overlay boot animation.',
+          toggle_overlay_enable_hint: 'After enabling, the module will resume auto-overlaying boot animation.',
+          toggle_overlay_disable: 'Disable',
+          toggle_overlay_enable: 'Enable',
+          desc_title: '✏️ Edit Resolution',
+          desc_create_title: '➕ Create Config',
+          desc_config_name: 'Config Name',
+          desc_resolution: 'Resolution',
+          desc_width: 'Width',
+          desc_height: 'Height',
+          desc_fps: 'FPS',
+          desc_format: 'Format',
+          desc_format_standard: 'Standard',
+          desc_format_oneplus: 'OnePlus',
+          desc_offset_x: 'X Offset',
+          desc_offset_y: 'Y Offset',
+          desc_read_original: 'Read Original',
+          desc_save_config: 'Save Config',
+          desc_config_list: '📋 Config List',
+          desc_modified_title: '🔧 Modified Animations',
+          desc_restore: 'Restore Backup',
+          desc_undo: 'Undo Last Change',
+          desc_apply: 'Apply',
+          desc_delete: 'Delete',
+          desc_confirm_delete: 'Confirm Delete?',
+          desc_original_missing: 'Original backup not found',
+          desc_original_loaded: '✅ Loaded original: ',
+          desc_config_saved: '✅ Config saved: ',
+          desc_config_name_exists: 'Config name already exists',
+          desc_config_name_invalid: 'Invalid config name',
+          desc_config_deleted: '✅ Config deleted: ',
+          desc_config_empty: 'No config yet. Create one first.',
+          desc_modified_empty: 'No modified animations.',
+          desc_apply_title: 'Apply Config',
+          desc_restore_title: 'Restore Backup',
+          desc_modal_apply_sub: 'Select animations to apply this config (multi-select)',
+          desc_modal_restore_sub: 'Select animations to restore (multi-select)',
+          modal_select_all: 'Select All',
+          modal_select_none: 'Select None',
+          modal_cancel: 'Cancel',
+          modal_confirm: 'Confirm',
+          desc_modal_select_all: 'Select All',
+          desc_modal_select_none: 'Select None',
+          desc_modal_cancel: 'Cancel',
+          desc_modal_confirm: 'Apply',
+          desc_modal_confirm_restore: 'Restore',
+          desc_apply_success: '✅ Config applied: ',
+          desc_apply_summary_success: 'Success',
+          desc_apply_summary_skip: 'Skipped',
+          desc_apply_no_selection: 'Select at least one animation',
+          desc_restore_success: '✅ Restored: ',
+          desc_restore_no_selection: 'Select at least one animation',
+          desc_undo_confirm: 'Undo last change?\n\nThis will restore desc.txt for all animations touched by the last resolution edit.',
+          desc_undo_success: '✅ Undone',
+          desc_undo_none: 'Nothing to undo',
+          desc_restore_confirm: 'Restore desc.txt backups for selected animations?',
+          desc_force_label: 'Force overwrite (ignore format check)',
+          desc_force_hint: '⚠️ Force overwrite will rewrite desc.txt in the configured format even if formats do not match.',
+          desc_fill_required: 'Please fill width / height / fps',
+          desc_offset_required: 'OnePlus format requires X / Y offset',
+          audio_title: '🔊 Import Boot Audio',
+          audio_hint: 'Non-WAV formats will be auto-converted; you will be notified if it fails.',
+          audio_file_label: 'Audio File',
+          audio_scan: 'Scan Storage',
+          audio_skip_check: 'Skip Check',
+          audio_skip_check_hint: 'No pre-check, faster',
+          audio_android_miui: 'MIUI only',
+          audio_remove_all: 'Remove All Audio',
+          audio_remove_confirm: 'Confirm?',
+          audio_remove_success: '✅ Audio removed',
+          audio_pick: 'Pick',
+          audio_android_label: 'Android Version',
+          audio_android_9plus: 'Android 9+',
+          audio_android_9minus: '≤ Android 9',
+          audio_import: 'Import',
+          audio_modal_title: 'Select animations to import audio',
+          audio_modal_sub: 'Audio will be embedded (Android 9+) or mounted (≤ Android 9)',
+          audio_no_file: 'Please pick an audio file first',
+          audio_no_selection: 'Select at least one animation',
+          audio_converting: 'Converting to WAV…',
+          audio_uploading: 'Uploading audio…',
+          audio_importing: 'Importing to animations…',
+          audio_success: '✅ Audio import done',
+          audio_fail: 'Audio import failed',
+          audio_status_label: 'Status',
+          audio_file_label_short: 'File',
+          audio_size_label: 'Size',
+          audio_mode_label: 'Mode',
+          audio_sdk_label: 'SDK',
+          audio_valid_label: 'Valid',
+          audio_mounted_label: 'Mounted',
+          audio_present_yes: 'Imported',
+          audio_present_no: 'Not imported',
+          audio_yes: 'Yes',
+          audio_no: 'No',
+          audio_mode_9plus: 'Android 9+ embedded',
+          audio_mode_9minus: '≤ Android 9 mounted',
+          audio_mode_miui: 'MIUI only (system/product/media)',
+          audio_empty: 'No audio imported',
+
+          // === Debug Panel ===
+          sc_channel: 'Upload Channel',
+          sc_channel_stream: '✅ Stream (fast)',
+          sc_channel_base64: '⚠️ base64 fallback (slow)',
+          sc_echo: 'echo test',
+          sc_status: 'status test',
+          sc_tool_status: 'tool-status',
+          sc_i18n_integrity: 'i18n integrity',
+          sc_i18n_missing: 'i18n possible untranslated',
+          sc_ok: '✅ OK',
+          sc_fail: '❌ FAIL',
+          sc_empty: '❌ empty',
+          sc_not_installed: '❌ not installed',
+          sc_read_failed: '❌ read failed',
+          sc_upload_label: 'Upload Channel',
+
+          ss_stage: 'Stage',
+          ss_timestamp: 'Timestamp',
+          ss_android_release: 'Android Release',
+          ss_sdk: 'SDK',
+          ss_brand: 'Brand',
+          ss_theme: 'Theme',
+          ss_language: 'Language',
+          ss_hyperos_version: 'HyperOS Version',
+          ss_hyperos_incremental: 'HyperOS Incremental',
+          ss_product_bootanim_property: 'Bootanim Property',
+          ss_selected_source: 'Selected Source',
+          ss_payload_present: 'Payload Present',
+          ss_payload_size: 'Payload Size',
+          ss_module_disabled: 'Module Disabled',
+          ss_import_busy: 'Import Busy',
+          ss_available_animations: 'Available Animations',
+          ss_overlay_tree_current: 'Overlay Tree Current',
+          ss_overlay_tree_meta: 'Overlay Tree Meta',
+          ss_play_mode: 'Play Mode',
+          ss_last_import: 'Last Import',
+          ss_no_state: '⚠️ Failed to get system state (status returned empty)',
+          sc_i18n_all_aligned: ' keys, all aligned',
+          // === Runtime messages ===
+          msg_lib_empty: 'Animation library is empty. Import a zip first.',
+          msg_badge_active: 'In use',
+          msg_btn_applied: 'Applied',
+          msg_btn_use: 'Use this animation',
+          msg_btn_confirm_switch: 'Confirm switch?',
+          msg_already_active: 'This animation is already in use.',
+          msg_switch_hint: 'Tap again to switch to \u201c{name}\u201d (takes effect after reboot).',
+          msg_btn_delete: 'Delete',
+          msg_btn_confirm_delete: 'Confirm delete?',
+          msg_last_anim: 'Note: this is the last animation. Deleting it will leave the library empty. Tap “Confirm delete?” again to proceed.',
+          msg_deleting: 'Deleting \u201c{name}\u201d…',
+          msg_deleted: 'Deleted \u201c{name}\u201d.',
+          msg_applying: 'Applying \u201c{name}\u201d…',
+          msg_applied_ok: 'Switched to \u201c{name}\u201d (takes effect after reboot).',
+          msg_resetting: 'Restoring default animation…',
+          msg_reset_ok: 'Default animation restored. Please reboot.',
+          msg_overlay_doing: '{action} overlay feature…',
+          msg_overlay_done: '✅ Overlay feature {action}. Reboot to take effect.',
+          msg_confirm_overlay: 'Are you sure you want to {action} the boot animation overlay?\n\n{hint}',
+          msg_no_zip: 'No zip found. Put animations in "Download" or /sdcard first.',
+          msg_btn_import: 'Import',
+          msg_scanning: 'Scanning storage…',
+          msg_scan_found_zip: 'Found {n} zip(s). Tap "Import".',
+          msg_scan_empty_zip: 'No zip found.',
+          msg_import_timeout: 'Import timed out. Check var/logs in the module directory.',
+          msg_imported: 'Imported to library: {name}. Tap "Use this animation" and reboot to apply.',
+          msg_import_fail: 'Import failed. Make sure the file is a valid bootanimation zip.',
+          msg_pick_path: 'Please select or enter a zip file path.',
+          msg_importing: 'Importing \u201c{name}\u201d… (large files may take a while)',
+          msg_import_wait: 'Import still in progress, waiting…',
+          msg_import_retry: 'Last import failed. Please retry.',
+          msg_pick_zip_only: 'Please select a .zip animation archive.',
+          msg_locating: 'Locating \u201c{name}\u201d…',
+          msg_fast_import: 'File found, importing…',
+          msg_slow_import: 'Reading \u201c{name}\u201d… (file not in common dir, using slow channel)',
+          msg_validating: 'Validating and applying…',
+          msg_imported_short: 'Imported to library: \u201c{name}\u201d.',
+          msg_checking_file: 'Checking file…',
+          msg_file_missing: 'File missing or unreadable: {path}',
+          msg_no_audio: 'No audio file found. Put audio in the Download folder first.',
+          msg_btn_fill: 'Fill',
+          msg_btn_confirm_short: 'Confirm?',
+          msg_audio_deleted: 'Deleted: {path}',
+          msg_audio_filled: 'Filled: {path}',
+          msg_scan_audio_found: 'Found {n} audio file(s). Tap "Fill".',
+          msg_scan_audio_empty: 'No audio file found.',
+          msg_delete_fail: 'Delete failed',
+          msg_removing_audio: 'Removing all audio…',
+          msg_no_audio_to_remove: 'No audio found to remove',
+          msg_copying_audio: 'Copying audio…',
+          msg_copy_audio_fail: 'Failed to copy audio',
+          msg_no_audio_source: 'No audio source available',
+          msg_audio_removed_n: '✅ Removed {n} item(s):',
+          msg_refreshed: '✅ Refreshed',
+          msg_open_in_manager: 'Please open this page from the module settings.',
+          msg_bridge_unavailable: 'Module settings API unavailable.',
+          msg_err_generic: 'Operation failed. Please retry.',
+          msg_err_invalid_zip: 'Not a valid bootanimation zip (ZIP format with desc.txt at root required)',
+          msg_err_not_zip: 'Not a valid zip file',
+          msg_err_not_found: 'File or animation not found. Please re-select.',
+          msg_err_format_mismatch: 'Format mismatch',
+          msg_err_unknown_format: 'Unrecognized desc.txt format',
+          msg_unknown_anim: 'Unknown animation',
+          msg_unknown_size: 'Unknown size',
+          msg_selfchecking: 'Running self-check…',
+          msg_selfcheck_done: '✅ Self-check done',
+          msg_selfcheck_fail: 'Self-check failed: {err}',
+          msg_saved_reboot: ', reboot to take effect',
+          msg_payload_info: '{size} · {n} available',
+          msg_importing_status: ' · importing…',
+          msg_selfcheck_placeholder: 'Tap "Run Self-check" below to test the environment',
+          log_payload_summary: 'ls -l output',
+        }
+      };
+
+      let currentLang = 'zh';
+      let currentBrand = 'xiaomi';
+
+      function t(key) {
+        return i18n[currentLang]?.[key] || i18n.zh[key] || key;
+      }
+
+      function tf(key, vars) {
+        let out = t(key);
+        if (vars) {
+          Object.keys(vars).forEach(function(k) {
+            out = out.split("{" + k + "}").join(String(vars[k]));
+          });
+        }
+        return out;
+      }
+
+      function applyLanguage(lang) {
+        currentLang = lang || currentLang;
+        document.querySelectorAll('[data-i18n]').forEach(node => {
+          const key = node.dataset.i18n;
+          if (!key) return;
+          let text = t(key);
+          if (key === 'eyebrow') text = currentBrand === 'oneplus' ? t('eyebrow_coloros') : t('eyebrow_hyperos');
+          if (node.tagName === 'INPUT' && node.type === 'button') node.value = text;
+          else node.textContent = text;
+        });
+        // SELFCHECK_LANG_SYNC
+        const scBtn = document.getElementById("refresh-selfcheck");
+        if (scBtn && !scBtn.disabled) {
+          scBtn.textContent = scBtn.dataset.done === "yes"
+            ? t("selfcheck_rerun")
+            : t("refresh_selfcheck");
+        }
+      }
+
+      // ============================================================
+      // 常量
+      // ============================================================
+      const DEFAULT_DIR = "/data/adb/modules/hyperosbootanim";
+      const STORAGE_DIRS = ["/sdcard/Download", "/storage/emulated/0/Download", "/sdcard/CustomBoot", "/sdcard", "/storage/emulated/0", "/data/local/tmp"];
+      const CHUNK = 90 * 1024;
+
+      // ============================================================
+      // DOM
+      // ============================================================
+      const el = {
+        current: document.getElementById("current"),
+        library: document.getElementById("library"),
+        libraryStatus: document.getElementById("library-status"),
+        resetDefault: document.getElementById("reset-default"),
+        toggleOverlay: document.getElementById("toggle-overlay"),
+        selfcheckGrid: document.getElementById("selfcheck-grid"),
+        refreshSelfcheck: document.getElementById("refresh-selfcheck"),
+        stateGrid: document.getElementById("state-grid"),
+        mountList: document.getElementById("mount-list"),
+        logPostFsData: document.getElementById("log-post-fs-data"),
+        logPostMount: document.getElementById("log-post-mount"),
+        logService: document.getElementById("log-service"),
+        logValidation: document.getElementById("log-validation"),
+        logActivate: document.getElementById("log-activate"),
+        logPayload: document.getElementById("log-payload"),
+        refreshLogs: document.getElementById("refresh-logs"),
+        pickLabel: document.getElementById("pick-label"),
+        pickZip: document.getElementById("pick-zip"),
+        pickName: document.getElementById("pick-name"),
+        pickImport: document.getElementById("pick-import"),
+        pickProgress: document.getElementById("pick-progress"),
+        scanStorage: document.getElementById("scan-storage"),
+        storageHint: document.getElementById("storage-hint"),
+        storageList: document.getElementById("storage-list"),
+        importStatus: document.getElementById("import-status"),
+        descConfigName: document.getElementById("desc-config-name"),
+        descWidth: document.getElementById("desc-width"),
+        descHeight: document.getElementById("desc-height"),
+        descFps: document.getElementById("desc-fps"),
+        descOffsetRows: document.getElementById("desc-offset-rows"),
+        descOffsetX: document.getElementById("desc-offset-x"),
+        descOffsetY: document.getElementById("desc-offset-y"),
+        descReadOriginal: document.getElementById("desc-read-original"),
+        descSaveConfig: document.getElementById("desc-save-config"),
+        descCreateStatus: document.getElementById("desc-create-status"),
+        descConfigList: document.getElementById("desc-config-list"),
+        descConfigStatus: document.getElementById("desc-config-status"),
+        descModifiedList: document.getElementById("desc-modified-list"),
+        descModifiedStatus: document.getElementById("desc-modified-status"),
+        descRestoreBtn: document.getElementById("desc-restore-btn"),
+        descUndoBtn: document.getElementById("desc-undo-btn"),
+        descResult: document.getElementById("desc-result"),
+        audioPath: document.getElementById("audio-path"),
+        audioPick: document.getElementById("audio-pick"),
+        audioImport: document.getElementById("audio-import"),
+        audioProgress: document.getElementById("audio-progress"),
+        audioStatus: document.getElementById("audio-status"),
+        audioStateGrid: document.getElementById("audio-state-grid"),
+        audioScan: document.getElementById("audio-scan"),
+        audioSkipCheck: document.getElementById("audio-skip-check"),
+        audioStorageList: document.getElementById("audio-storage-list"),
+        audioRemoveAll: document.getElementById("audio-remove-all"),
+        logAudio: document.getElementById("log-audio"),
+        modalOverlay: document.getElementById("modal-overlay"),
+        modalTitle: document.getElementById("modal-title"),
+        modalSub: document.getElementById("modal-sub"),
+        modalList: document.getElementById("modal-list"),
+        modalSelectAll: document.getElementById("modal-select-all"),
+        modalSelectNone: document.getElementById("modal-select-none"),
+        modalCancel: document.getElementById("modal-cancel"),
+        modalConfirm: document.getElementById("modal-confirm"),
+        floatRefresh: document.getElementById("float-refresh"),
+      };
+
+      let moduleDir = DEFAULT_DIR;
+      let busy = false;
+      let execMode = "sync";
+      let cbSeq = 0;
+      let storageFiles = [];
+      let chosenFile = null;
+      let currentTheme = 'light';
+      let hasUndoFlag = false;
+
+      // ============================================================
+      // 工具
+      // ============================================================
+      const bridgeReady = () => typeof window.ksu !== "undefined" && typeof window.ksu.exec === "function";
+      const uploadReady = () => bridgeReady() && typeof window.ksu.fileOutputStream === "function";
+      const shellQuote = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
+      const control = (...args) => [shellQuote(moduleDir + "/bin/bootanimctl.sh"), ...args.map(shellQuote)].join(" ");
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+      const controlCommand = (...args) => command(control(...args));
+      const paint = () => new Promise(resolve => setTimeout(resolve, 50));
+
+      function detectExecMode() {
+        return new Promise(resolve => {
+          let done = false;
+          const settle = mode => { if (!done) { done = true; resolve(mode); } };
+
+          const probe = (argc) => {
+            const name = "__ksu_probe_" + Date.now() + "_" + (++cbSeq);
+            const timer = setTimeout(() => { delete window[name]; }, 600);
+            window[name] = () => { clearTimeout(timer); delete window[name]; settle(argc === 3 ? "async" : "async2"); };
+            try {
+              let ret;
+              if (argc === 3) {
+                ret = window.ksu.exec("echo ksu-webui-probe", null, "window." + name);
+              } else {
+                ret = window.ksu.exec("echo ksu-webui-probe", "window." + name);
+              }
+              if (ret !== undefined && ret !== null && !(ret && typeof ret.then === "function")) {
+                clearTimeout(timer); delete window[name]; settle("sync");
+              }
+            } catch (_) {
+              clearTimeout(timer); delete window[name]; settle("sync");
+            }
+          };
+
+          probe(3);
+          setTimeout(() => { if (!done) probe(2); }, 650);
+          setTimeout(() => { settle("sync"); }, 1400);
+        });
+      }
+
+
+      async function command(text) {
+        if (!bridgeReady()) throw new Error("未检测到模块设置接口（KernelSU/APatch）");
+        return new Promise((resolve, reject) => {
+          const name = "__ksu_cb_" + (++cbSeq);
+          const timer = setTimeout(() => {
+            delete window[name];
+            reject(new Error("命令执行超时"));
+          }, 30000);
+          window[name] = (code, stdout) => {
+            clearTimeout(timer);
+            delete window[name];
+            resolve(stdout == null ? "" : String(stdout));
+          };
+          try {
+            // sh -c 包一层，让桥接层不解析内部的 && / ; / | / 引号
+            const wrapped = "sh -c " + shellQuote(text);
+            window.ksu.exec(wrapped, null, "window." + name);
+          } catch (e) {
+            clearTimeout(timer);
+            delete window[name];
+            reject(e);
+          }
+        });
+      }
+
+      function status(target, text, kind = "") {
+        if (!target) return;
+        target.textContent = text;
+        target.className = "status" + (kind ? " " + kind : "");
+      }
+
+      function isOk(result) {
+        return String(result || "").split(/\r?\n/).some(line => line.trim().startsWith("OK "));
+      }
+
+      function friendlyError(text) {
+        const lines = String(text || "").split(/\r?\n/);
+        const errLine = lines.find(l => l.trim().startsWith("ERROR ")) || lines[0] || "";
+        let msg = errLine.trim().replace(/^ERROR\s*/, "");
+        if (!msg) msg = t("msg_err_generic");
+        if (/invalid ZIP archive|invalid bootanimation archive/i.test(msg)) msg = t("msg_err_invalid_zip");
+        else if (/bad zip magic|not PK/i.test(msg)) msg = t("msg_err_not_zip");
+        else if (/file not found|animation not found|empty source|invalid animation index/i.test(msg)) msg = t("msg_err_not_found");
+        else if (/format mismatch/i.test(msg)) msg = t("msg_err_format_mismatch");
+        else if (/unknown format/i.test(msg)) msg = t("msg_err_unknown_format");
+        return msg;
+      }
+
+      function displayName(path) {
+        let raw = String(path || "").split("/").pop().replace(/\.zip$/i, "");
+        raw = raw.replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
+        return raw || t("msg_unknown_anim");
+      }
+
+      function bytes(value) {
+        let size = Number(value);
+        if (!Number.isFinite(size) || size < 0) return t("msg_unknown_size");
+        const units = ["B", "KB", "MB", "GB"];
+        let unit = 0;
+        while (size >= 1024 && unit < units.length - 1) { size /= 1024; unit++; }
+        return (unit ? size.toFixed(size >= 10 ? 0 : 1) : size) + " " + units[unit];
+      }
+
+      function props(output) {
+        const result = {};
+        output.split(/\r?\n/).forEach(line => { const at = line.indexOf("="); if (at > 0) result[line.slice(0, at)] = line.slice(at + 1); });
+        return result;
+      }
+
+      function entries(output) {
+        return output.split(/\r?\n/).filter(Boolean).map(line => {
+          const part = line.split("\t");
+          return part.length >= 5 ? { id: part[0], path: part[1], size: part[2], active: part[3] === "yes", info: part[4] } : null;
+        }).filter(Boolean);
+      }
+
+      // ============================================================
+      // 主题
+      // ============================================================
+      function applyTheme(theme) {
+        currentTheme = theme === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = currentTheme;
+        document.querySelectorAll('input[name="theme-radio"]').forEach(r => { r.checked = r.value === currentTheme; });
+      }
+
+      // ============================================================
+      // 主题切换遮罩动画
+      // ============================================================
+      const rippleBlack = document.getElementById("theme-ripple-black");
+      const rippleCircle = document.getElementById("theme-ripple-circle");
+
+      const rippleWhite = document.getElementById("theme-ripple-white");
+
+      let rippleResolve = null;
+      let themeSwitching = false;
+
+      function finishRippleCover() {
+        if (rippleResolve) {
+          rippleResolve();
+          rippleResolve = null;
+        }
+      }
+
+      if (rippleCircle) rippleCircle.addEventListener("animationend", finishRippleCover);
+
+      function sleepMs(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      async function runRippleTransition(applyChange) {
+        if (themeSwitching) return false;
+        themeSwitching = true;
+        try {
+          rippleBlack.style.display = "block";
+          rippleWhite.style.display = "none";
+          rippleWhite.classList.remove("fading");
+
+          await new Promise(resolve => { rippleResolve = resolve });
+
+          await applyChange();
+          void document.body.scrollHeight;
+
+          await sleepMs(80);
+          rippleWhite.style.display = "block";
+          await sleepMs(420);
+
+          rippleBlack.style.display = "none";
+          rippleWhite.classList.add("fading");
+          await sleepMs(400);
+          rippleWhite.style.display = "none";
+          rippleWhite.classList.remove("fading");
+          return true;
+        } catch (e) {
+          rippleBlack.style.display = "none";
+          rippleWhite.style.display = "none";
+          rippleWhite.classList.remove("fading");
+          throw e;
+        } finally {
+          themeSwitching = false;
+        }
+      }
+
+      // SWITCH_THEME_TIMEOUT_PATCH
+      async function switchTheme(newTheme) {
+        if (currentTheme === newTheme) return;
+        const fallback = new Promise(r => setTimeout(r, 2000));
+        try {
+          await Promise.race([
+            runRippleTransition(async () => { applyTheme(newTheme); }),
+            fallback
+          ]);
+        } catch (_) {}
+        applyTheme(newTheme);
+        try {
+          const rb = document.getElementById("theme-ripple-black");
+          const rw = document.getElementById("theme-ripple-white");
+          if (rb) rb.style.display = "none";
+          if (rw) { rw.style.display = "none"; rw.classList.remove("fading"); }
+        } catch (_) {}
+      }
+
+
+
+      // ============================================================
+      // 更新控件状态
+      // ============================================================
+      function updateControls() {
+        const ready = bridgeReady();
+        el.pickZip.disabled = busy || !ready;
+        el.pickLabel.classList.toggle("disabled", el.pickZip.disabled);
+        el.pickImport.disabled = busy || !chosenFile || !ready;
+        el.scanStorage.disabled = busy || !ready;
+        el.resetDefault.disabled = busy || !ready;
+        el.library.querySelectorAll("button").forEach(b => { b.disabled = busy; });
+        el.storageList.querySelectorAll("button").forEach(b => { b.disabled = busy; });
+        document.querySelectorAll('input[name="language-radio"]').forEach(r => { r.disabled = busy; });
+        document.querySelectorAll('input[name="theme-radio"]').forEach(r => { r.disabled = busy; });
+        document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => { r.disabled = busy; });
+        document.querySelectorAll('input[name="desc-format"]').forEach(r => { r.disabled = busy; });
+        if (el.descSaveConfig) el.descSaveConfig.disabled = busy;
+        if (el.descReadOriginal) el.descReadOriginal.disabled = busy;
+        if (el.descRestoreBtn) el.descRestoreBtn.disabled = busy;
+        if (el.descUndoBtn) el.descUndoBtn.disabled = busy || !hasUndoFlag;
+        if (typeof updateAudioControls === "function") updateAudioControls();
+      }
+
+      // ============================================================
+      // 日志
+      // ============================================================
+      function setLog(box, text) {
+        if (!box) return;
+        const value = (text == null ? "" : String(text)).trim();
+        box.textContent = value || t('no_error');
+      }
+
+      async function renderSelfCheck() {
+        const box = el.selfcheckGrid;
+        if (!box) return;
+        box.replaceChildren();
+
+        const rows = [];
+
+        // 1. bridge / 环境
+        rows.push(['bridgeReady', bridgeReady() ? 'yes' : 'no']);
+        rows.push(['window.ksu', typeof window.ksu]);
+        rows.push(['ksu.exec', typeof (window.ksu && window.ksu.exec)]);
+        rows.push(['ksu.fileOutputStream', typeof (window.ksu && window.ksu.fileOutputStream)]);
+        const __fosOK = typeof (window.ksu && window.ksu.fileOutputStream) === "function";
+        rows.push([t("sc_channel"), __fosOK ? t("sc_channel_stream") : t("sc_channel_base64")]);
+        rows.push(['execMode', execMode]);
+        rows.push(['moduleDir', moduleDir]);
+        rows.push(['theme', currentTheme]);
+        rows.push(['lang', currentLang]);
+        rows.push(['brand', currentBrand]);
+        rows.push(['busy', busy ? 'yes' : 'no']);
+
+        // i18n 完整性
+        try {
+          const zhKeys = Object.keys(i18n.zh || {});
+          const enKeys = Object.keys(i18n.en || {});
+          const enSet = new Set(enKeys);
+          const zhSet = new Set(zhKeys);
+          const missingInEn = zhKeys.filter(k => !enSet.has(k));
+          const missingInZh = enKeys.filter(k => !zhSet.has(k));
+          const SAME_VALUE_OK = new Set([
+            'eyebrow_hyperos', 'eyebrow_coloros',
+            'lang_zh', 'lang_en',
+            'theme_light', 'theme_dark',
+            'audio_sdk_label',
+            'audio_android_9plus', 'audio_android_9minus',
+            'ss_sdk',            'sc_tool_status', 'sc_ok',
+
+          ]);
+          const sameValue = zhKeys.filter(k =>
+            enSet.has(k) && i18n.zh[k] === i18n.en[k] && !SAME_VALUE_OK.has(k)
+          );
+          if (missingInEn.length || missingInZh.length) {
+            let str = "⚠️";
+            if (missingInEn.length) str += " en缺 " + missingInEn.length + " 个 (" + missingInEn.slice(0,3).join(",") + (missingInEn.length>3?"…":"") + ")";
+            if (missingInZh.length) str += " zh缺 " + missingInZh.length + " 个 (" + missingInZh.slice(0,3).join(",") + (missingInZh.length>3?"…":"") + ")";
+            rows.push([t("sc_i18n_integrity"), str]);
+          } else {
+            rows.push([t("sc_i18n_integrity"), "✅ " + zhKeys.length + t("sc_i18n_all_aligned")]);
+          }
+          if (sameValue.length) {
+            rows.push([t("sc_i18n_missing"), sameValue.slice(0,5).join(",") + (sameValue.length>5?" …":"")]);
+          }
+        } catch (e) {
+          rows.push([t("sc_i18n_integrity"), "❌ " + (e.message || e)]);
+        }
+
+        // 2. 命令测试
+        if (bridgeReady()) {
+          try {
+            const echoOut = await command("echo ksu-ok");
+            rows.push([t("sc_echo"), (echoOut || '').trim().includes('ksu-ok') ? t("sc_ok") : t("sc_fail")]);
+          } catch (e) {
+            rows.push([t("sc_echo"), '❌ ' + (e.message || e)]);
+          }
+
+          try {
+            const statusOut = await controlCommand("status");
+            const firstLine = (statusOut || '').split('\n')[0];
+            rows.push([t("sc_status"), firstLine ? '✅ ' + firstLine.slice(0, 40) : t("sc_empty")]);
+          } catch (e) {
+            rows.push([t("sc_status"), '❌ ' + (e.message || e)]);
+          }
+
+          // 工具检测
+          try {
+            const toolOut = await controlCommand("tool-status");
+            const tools = props(toolOut);
+            const isTermux = (p) => !!p && p.indexOf("/data/data/com.termux/") === 0;
+            const toolRows = [
+              [isTermux(tools.zip_path)    ? 'zip (Termux)'    : 'zip',    tools.zip    === 'yes' ? '✅ ' + (tools.zip_path || '')    : t("sc_not_installed")],
+              [isTermux(tools.unzip_path)  ? 'unzip (Termux)'  : 'unzip',  tools.unzip  === 'yes' ? '✅ ' + (tools.unzip_path || '')  : t("sc_not_installed")],
+              [isTermux(tools.ffmpeg_path) ? 'ffmpeg (Termux)' : 'ffmpeg', tools.ffmpeg === 'yes' ? '✅ ' + (tools.ffmpeg_path || '') : t("sc_not_installed")],
+            ];
+            try {
+              const md5Out = await command("sh -c " + shellQuote("command -v md5sum || echo MISSING"));
+              const md5Path = (md5Out || '').trim().split('\n')[0];
+              toolRows.push([isTermux(md5Path) ? 'md5sum (Termux)' : 'md5sum', md5Path && md5Path !== 'MISSING' ? '✅ ' + (md5Path || '') : t("sc_not_installed")]);
+            } catch (_) {
+              toolRows.push(['md5sum', t("sc_fail")]);
+            }
+            window.__toolRowsForRender = toolRows;
+          } catch (_) {
+            const kd = document.createElement('div'); kd.className = 'k'; kd.textContent = t("sc_tool_status");
+            const vd = document.createElement('div'); vd.className = 'v'; vd.textContent = t("sc_read_failed");
+            box.append(kd, vd);
+          }
+        }
+
+        // 渲染
+        rows.forEach(([k, v]) => {
+          const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
+          const vd = document.createElement("div"); vd.className = "v"; vd.textContent = String(v);
+          box.append(kd, vd);
+        });
+        if (window.__toolRowsForRender) {
+          window.__toolRowsForRender.forEach(([k, v]) => {
+            const kd = document.createElement("div"); kd.className = "k"; kd.textContent = k;
+            const vd = document.createElement("div"); vd.className = "v"; vd.textContent = v;
+            box.append(kd, vd);
+          });
+          window.__toolRowsForRender = null;
+        }
+      }
+
+      function renderState(st) {
+        el.stateGrid.replaceChildren();
+
+        const hasData = st && Object.keys(st).some(k => st[k] !== undefined && st[k] !== '');
+        if (!hasData) {
+          const empty = document.createElement('div');
+          empty.className = 'log-empty';
+          empty.textContent = t('ss_no_state');
+          el.stateGrid.append(empty);
+          el.mountList.replaceChildren();
+          return;
+        }
+
+        const rows = [
+          [t('ss_stage'), st.stage], [t('ss_timestamp'), st.timestamp],
+          [t('ss_android_release'), st.android_release], [t('ss_sdk'), st.sdk],
+          [t('ss_brand'), st.brand], [t('ss_theme'), st.theme], [t('ss_language'), st.language],
+          [t('ss_hyperos_version'), st.hyperos_version], [t('ss_hyperos_incremental'), st.hyperos_incremental],
+          [t('ss_product_bootanim_property'), st.product_bootanim_property],
+          [t('ss_selected_source'), st.selected_source],
+          [t('ss_payload_present'), st.payload_present], [t('ss_payload_size'), st.payload_size],
+          [t('ss_module_disabled'), st.module_disabled], [t('ss_import_busy'), st.import_busy],
+          [t('ss_available_animations'), st.available_animations],
+          [t('ss_overlay_tree_current'), st.overlay_tree_current],
+          [t('ss_overlay_tree_meta'), st.overlay_tree_meta],
+          [t('ss_play_mode'), st.play_mode],
+          [t('ss_last_import'), st.last_import]
+        ];
+        rows.forEach(([k, v]) => {
+          if (v === undefined || v === null || v === '') return;
+          const kd = document.createElement('div'); kd.className = 'k'; kd.textContent = k;
+          const vd = document.createElement('div'); vd.className = 'v'; vd.textContent = String(v);
+          el.stateGrid.append(kd, vd);
+        });
+        el.mountList.replaceChildren();
+        (st.bind_mounts || '').split(/\r?\n/).filter(Boolean).forEach(line => {
+          const li = document.createElement('li'); li.textContent = line; el.mountList.append(li);
+        });
+      }
+
+      function renderAudioState(st) {
+        const box = el.audioStateGrid;
+        if (!box) return;
+        box.replaceChildren();
+
+        if (!st || st.audio_present === undefined) {
+          const empty = document.createElement('div');
+          empty.className = 'log-empty';
+          empty.textContent = t('audio_empty');
+          box.append(empty);
+          return;
+        }
+
+        const modeLabel = {
+          '9plus': t('audio_mode_9plus'),
+          '9minus': t('audio_mode_9minus'),
+          'miui': t('audio_mode_miui'),
+        };
+        const rows = [
+          [t('audio_status_label'), st.audio_present === 'yes' ? t('audio_present_yes') : t('audio_present_no')],
+          [t('audio_file_label_short'), st.audio_file],
+          [t('audio_size_label'), st.audio_size ? (parseInt(st.audio_size) + ' B') : ''],
+          [t('audio_mode_label'), modeLabel[st.audio_mode] || st.audio_mode],
+          [t('audio_sdk_label'), st.audio_sdk],
+          [t('audio_valid_label'), st.audio_valid === 'yes' ? t('audio_yes') : t('audio_no')],
+          [t('audio_mounted_label'), st.audio_mounted === 'yes' ? t('audio_yes') : t('audio_no')],
+        ];
+        let hasAny = false;
+        rows.forEach(([k, v]) => {
+          if (v === undefined || v === null || v === '') return;
+          hasAny = true;
+          const kd = document.createElement('div'); kd.className = 'k'; kd.textContent = k;
+          const vd = document.createElement('div'); vd.className = 'v'; vd.textContent = v || '-';
+          box.append(kd, vd);
+        });
+        if (!hasAny) {
+          const empty = document.createElement('div'); empty.className = 'log-empty';
+          empty.textContent = t('audio_empty');
+          box.append(empty);
+        }
+      }
+
+      async function loadLogs() {
+        try {
+          const [statusOut, pfdOut, pmOut, svcOut, valOut, actOut, payloadOut, audioStatusOut, audioLogOut] = await Promise.all([
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/state/status.txt") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/logs/post-fs-data.log") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/logs/post-mount.log") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/logs/service.log") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/state/validation.log") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/state/activate.log") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("ls -l " + shellQuote(moduleDir + "/payload") + "/*.zip 2>/dev/null; ls -l " + shellQuote(moduleDir + "/payload/animations") + "/*.zip 2>/dev/null")),
+            command("sh -c " + shellQuote(control("audio-status") + " 2>/dev/null")),
+            command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/state/audio.log") + " 2>/dev/null"))
+          ]);
+          const statusProps = props(statusOut);
+          const audioProps = props(audioStatusOut);
+          renderState(statusProps);
+          renderAudioState(audioProps);
+          setLog(el.logAudio, audioLogOut);
+          setLog(el.logPostFsData, pfdOut);
+          setLog(el.logPostMount, pmOut);
+          setLog(el.logService, svcOut);
+          setLog(el.logValidation, valOut);
+          setLog(el.logActivate, actOut);
+          setLog(el.logPayload, payloadOut);
+        } catch (error) {
+          status(el.libraryStatus, friendlyError(error.message || String(error)), "error");
+        }
+      }
+
+      // ============================================================
+      // 动画库
+      // ============================================================
+      function render(list) {
+        el.library.replaceChildren();
+        if (!list.length) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = t("msg_lib_empty"); el.library.append(empty); return;
+        }
+        list.forEach(entry => {
+          const item = document.createElement("div"); item.className = "item" + (entry.active ? " active" : "");
+          const copy = document.createElement("div"); copy.className = "copy";
+          const name = document.createElement("div"); name.className = "name"; name.textContent = displayName(entry.path); name.title = entry.path;
+          if (entry.active) { const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = t("msg_badge_active"); name.append(badge); }
+          const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = (entry.info ? entry.info + " · " : "") + bytes(entry.size) + " · " + entry.path;
+          copy.append(name, meta);
+          const button = document.createElement("button"); button.type = "button"; button.dataset.active = entry.active ? "yes" : "no";
+          button.className = entry.active ? "secondary" : ""; button.textContent = entry.active ? t("msg_btn_applied") : t("msg_btn_use");
+          button.addEventListener("click", () => {
+            if (busy) return;
+            if (entry.active) { status(el.libraryStatus, t("msg_already_active"), "error"); return; }
+            if (button.dataset.confirm !== "yes") {
+              button.dataset.confirm = "yes"; button.textContent = t("msg_btn_confirm_switch");
+              status(el.libraryStatus, tf("msg_switch_hint", { name: displayName(entry.path) }));
+              setTimeout(() => { if (button.dataset.confirm === "yes") { button.dataset.confirm = ""; button.textContent = t("msg_btn_use"); } }, 5000);
+              return;
+            }
+            choose(entry);
+          });
+          if (entry.path.indexOf("/animations/") !== -1) {
+            const delButton = document.createElement("button"); delButton.type = "button"; delButton.className = "secondary danger"; delButton.textContent = t("msg_btn_delete");
+            delButton.addEventListener("click", () => {
+              if (busy) return;
+              if (entry.active) { status(el.libraryStatus, "当前使用的动画不能删除，请先切换其他动画再删除。", "error"); return; }
+              if (delButton.dataset.confirm !== "yes") {
+                delButton.dataset.confirm = "yes"; delButton.textContent = t("msg_btn_confirm_delete");
+                if (el.library.querySelectorAll(".item").length <= 1) {
+                  status(el.libraryStatus, t("msg_last_anim"), "error");
+                }
+                setTimeout(() => { if (delButton.dataset.confirm === "yes") { delButton.dataset.confirm = ""; delButton.textContent = t("msg_btn_delete"); } }, 3000);
+                return;
+              }
+              removeEntry(entry);
+            });
+            item.append(copy, button, delButton);
+          } else {
+            item.append(copy, button);
+          }
+          el.library.append(item);
+        });
+      }
+
+      async function removeEntry(entry) {
+        if (busy) return;
+        busy = true; updateControls(); status(el.libraryStatus, tf("msg_deleting", { name: displayName(entry.path) })); await paint();
+        try {
+          const result = await controlCommand("delete", entry.id);
+          if (!isOk(result)) throw new Error(result || "删除失败");
+          await refresh();
+          status(el.libraryStatus, tf("msg_deleted", { name: displayName(entry.path) }), "success");
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function refresh() {
+        if (!bridgeReady()) { el.current.textContent = t("msg_open_in_manager"); status(el.libraryStatus, t("msg_bridge_unavailable"), "error"); updateControls(); return; }
+        try {
+          const [statusOut, listOut] = await Promise.all([controlCommand("status"), controlCommand("list")]);
+          const current = props(statusOut);
+          currentBrand = current.brand || 'xiaomi';
+          // 主题由初始化统一处理（带过渡），此处不再直接切
+          // if (current.theme) applyTheme(current.theme);
+          if (current.language) { currentLang = current.language; applyLanguage(currentLang); document.querySelectorAll('input[name="language-radio"]').forEach(r => { r.checked = r.value === currentLang; }); }
+          hasUndoFlag = current.has_undo === 'yes';
+          let text = tf("msg_payload_info", { size: bytes(current.payload_size), n: current.available_animations });
+          if (current.import_busy === "yes") text += t("msg_importing_status");
+          el.current.textContent = text;
+          render(entries(listOut));
+          await loadLogs();
+          await refreshDescConfigs();
+          updateControls();
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function choose(entry) {
+        if (busy) return;
+        if (entry.active) { status(el.libraryStatus, "这个动画已经是当前使用的动画。", "error"); return; }
+        busy = true; updateControls(); status(el.libraryStatus, tf("msg_applying", { name: displayName(entry.path) })); await paint();
+        try {
+          const result = await controlCommand("select", entry.id);
+          if (!isOk(result)) throw new Error(result || "应用失败");
+          await refresh();
+          status(el.libraryStatus, tf("msg_applied_ok", { name: displayName(entry.path) }), "success");
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function resetDefault() {
+        if (busy) return;
+        busy = true; updateControls(); status(el.libraryStatus, t("msg_resetting")); await paint();
+        try {
+          const result = await controlCommand("reset");
+          if (!isOk(result)) throw new Error(result || "恢复失败");
+          await refresh();
+          status(el.libraryStatus, t("msg_reset_ok"), "success");
+        } catch (error) { status(el.libraryStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      // ============================================================
+      // 覆盖开关
+      // ============================================================
+      function updateOverlayButton(disabled) {
+        if (disabled) {
+          el.toggleOverlay.textContent = t('overlay_disabled');
+          el.toggleOverlay.style.borderColor = '#6a7a8a';
+          el.toggleOverlay.style.color = '#6a7a8a';
+          el.toggleOverlay.dataset.enabled = 'false';
+        } else {
+          el.toggleOverlay.textContent = t('overlay_enabled');
+          el.toggleOverlay.style.borderColor = '#4caf50';
+          el.toggleOverlay.style.color = '#9ad7a5';
+          el.toggleOverlay.dataset.enabled = 'true';
+        }
+      }
+
+      async function loadOverlayStatus() {
+        try {
+          const out = await controlCommand('status');
+          const current = props(out);
+          updateOverlayButton(current.module_disabled === 'yes');
+        } catch (_) {}
+      }
+
+      el.toggleOverlay.addEventListener('click', async () => {
+        if (busy) return;
+        const currentlyEnabled = el.toggleOverlay.dataset.enabled === 'true';
+        const action = currentlyEnabled ? t('toggle_overlay_disable') : t('toggle_overlay_enable');
+        const hint = currentlyEnabled ? t('toggle_overlay_disable_hint') : t('toggle_overlay_enable_hint');
+        if (!confirm(tf("msg_confirm_overlay", { action: action, hint: hint }))) return;
+        busy = true; updateControls(); status(el.libraryStatus, tf("msg_overlay_doing", { action: action })); await paint();
+        try {
+          const result = await controlCommand(currentlyEnabled ? 'disable' : 'enable');
+          if (!isOk(result)) throw new Error(result || '操作失败');
+          await refresh();
+          await loadOverlayStatus();
+          status(el.libraryStatus, tf("msg_overlay_done", { action: action }), "success");
+        } catch (e) { status(el.libraryStatus, friendlyError(e.message || String(e)), 'error'); }
+        finally { busy = false; updateControls(); }
+      });
+
+      // ============================================================
+      // 语言 / 主题切换
+      // ============================================================
+      document.querySelectorAll('input[name="language-radio"]').forEach(radio => {
+        radio.addEventListener('change', async () => {
+          if (busy || !radio.checked) return;
+          if (currentLang === radio.value) return;
+          const lang = radio.value;
+          busy = true; updateControls();
+          try {
+            const result = await controlCommand('language-set', lang);
+            if (!isOk(result)) throw new Error(result || '切换失败');
+
+            await runRippleTransition(async () => {
+              currentLang = lang;
+              applyLanguage(lang);
+              document.querySelectorAll('input[name="language-radio"]').forEach(r => { r.checked = r.value === currentLang; });
+              status(document.getElementById('language-status'), t('language_switch_success') + (lang === 'zh' ? '中文' : 'English'), 'success');
+              await refreshDescConfigs();
+              await loadLogs();
+            });
+          } catch (e) { status(document.getElementById('language-status'), friendlyError(e.message || String(e)), 'error'); }
+          finally { busy = false; updateControls(); }
+        });
+      });
+
+      document.querySelectorAll('input[name="theme-radio"]').forEach(radio => {
+        radio.addEventListener('change', async () => {
+          if (busy || !radio.checked) return;
+          const theme = radio.value;
+          busy = true; updateControls();
+          try {
+            const result = await controlCommand('theme-set', theme);
+            if (!isOk(result)) throw new Error(result || '切换失败');
+            await switchTheme(theme);
+          } catch (e) { status(el.libraryStatus, friendlyError(e.message || String(e)), 'error'); }
+          finally { busy = false; updateControls(); }
+        });
+      });
+
+      // ============================================================
+      // 播放模式
+      // ============================================================
+      const savePlayModeBtn = document.getElementById('save-play-mode');
+      const playModeStatus = document.getElementById('play-mode-status');
+      const playModeInfo = document.getElementById('play-mode-info');
+
+      async function loadPlayModeStatus() {
+        try {
+          const out = await controlCommand('play-mode-get');
+          const mode = out.trim();
+          document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => { r.checked = r.value === mode; });
+          const statusOut = await controlCommand('status');
+          const current = props(statusOut);
+          const disabled = current.module_disabled === 'yes';
+          const count = parseInt(current.available_animations) || 0;
+          playModeInfo.textContent = '动画池：' + count + ' 个动画可用' + (count < 2 ? '（需要至少 2 个动画）' : '');
+          if (disabled) {
+            playModeStatus.textContent = '⚠️ 覆盖功能已禁用，请先启用覆盖功能';
+            playModeStatus.style.color = 'var(--error)';
+            document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => { r.disabled = true; });
+            savePlayModeBtn.disabled = true;
+          } else {
+            playModeStatus.textContent = '✅ 覆盖功能已启用';
+            playModeStatus.style.color = 'var(--success)';
+            document.querySelectorAll('input[name="play-mode-radio"]').forEach(r => { r.disabled = false; });
+            savePlayModeBtn.disabled = false;
+          }
+        } catch (_) {}
+      }
+
+      savePlayModeBtn.addEventListener('click', async () => {
+        if (busy) return;
+        const selected = document.querySelector('input[name="play-mode-radio"]:checked');
+        if (!selected) return;
+        const mode = selected.value;
+        const modeNames = { off: t('play_mode_off'), random: t('play_mode_random'), sequential: t('play_mode_sequential') };
+        busy = true; updateControls();
+        try {
+          const result = await controlCommand('play-mode-set', mode);
+          if (!isOk(result)) throw new Error(result || '保存失败');
+          status(el.libraryStatus, t("play_mode_saved") + modeNames[mode] + t("msg_saved_reboot"), "success");
+        } catch (e) { status(el.libraryStatus, friendlyError(e.message || String(e)), 'error'); }
+        finally { busy = false; updateControls(); }
+      });
+
+      // ============================================================
+      // 导入
+      // ============================================================
+      function renderStorage(files) {
+        el.storageList.replaceChildren();
+        if (!files.length) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = t("msg_no_zip"); el.storageList.append(empty); return;
+        }
+        files.forEach(path => {
+          const item = document.createElement("div"); item.className = "item";
+          const copy = document.createElement("div"); copy.className = "copy";
+          const name = document.createElement("div"); name.className = "name"; name.textContent = displayName(path); name.title = path;
+          copy.append(name);
+          const button = document.createElement("button"); button.type = "button"; button.textContent = t("msg_btn_import"); button.disabled = busy;
+          button.addEventListener("click", () => importPath(path));
+          item.append(copy, button); el.storageList.append(item);
+        });
+      }
+
+      async function scanStorage() {
+        if (busy) return;
+        busy = true; updateControls(); status(el.importStatus, t("msg_scanning")); await paint();
+        const found = new Map();
+        try {
+          for (const dir of STORAGE_DIRS) {
+            const lsInner = "ls -1 " + shellQuote(dir) + "/*.zip 2>/dev/null";
+            const out = await command("sh -c " + shellQuote(lsInner));
+            out.split(/\r?\n/).forEach(line => {
+              line = line.trim();
+              if (line.endsWith(".zip") && line.startsWith("/") && !/hyperosbootanim-[^/]*\.zip$/.test(line)) {
+                const base = line.split("/").pop();
+                if (!found.has(base)) found.set(base, line);
+              }
+            });
+          }
+          storageFiles = [...found.values()].sort();
+          renderStorage(storageFiles);
+          el.storageHint.textContent = storageFiles.length ? tf("msg_scan_found_zip", { n: storageFiles.length }) : t("msg_scan_empty_zip");
+        } catch (error) { status(el.importStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function pollImport() {
+        for (let i = 0; i < 180; i++) {
+          await sleep(1000);
+          const out = await controlCommand("status");
+          if (props(out).import_busy !== "yes") return;
+        }
+        throw new Error(t("msg_import_timeout"));
+      }
+
+      async function importPathInner(path) {
+        await command("nohup " + control("import-local", path) + " >/dev/null 2>&1 &");
+        await pollImport();
+        const result = await command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/state/last-import.txt") + " 2>/dev/null"));
+        if (isOk(result)) {
+          await refresh();
+          return tf("msg_imported", { name: result.replace(/^[\s\S]*?OK stored=/, "") });
+        }
+        throw new Error((result && result.trim()) || t("msg_import_fail"));
+      }
+
+      async function importPath(path) {
+        if (busy) return;
+        if (!path) { status(el.importStatus, t("msg_pick_path"), "error"); return; }
+        busy = true; updateControls(); status(el.importStatus, tf("msg_importing", { name: displayName(path) })); await paint();
+        try {
+          const message = await importPathInner(path);
+          status(el.importStatus, message, "success");
+        } catch (error) { status(el.importStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function resumeImport() {
+        busy = true; updateControls(); status(el.importStatus, t("msg_import_wait")); await paint();
+        try {
+          await pollImport();
+          const result = await command("sh -c " + shellQuote("cat " + shellQuote(moduleDir + "/var/state/last-import.txt") + " 2>/dev/null"));
+          if (isOk(result)) {
+            await refresh();
+            status(el.importStatus, tf("msg_imported", { name: result.replace(/^[\s\S]*?OK stored=/, "") }), "success");
+          } else {
+            status(el.importStatus, (result && result.trim()) || t("msg_import_retry"), "error");
+          }
+        } catch (error) { status(el.importStatus, friendlyError(error.message || String(error)), "error"); }
+        finally { busy = false; updateControls(); }
+      }
+
+      const readBuffer = blob => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(reader.error || new Error("读取文件失败")); reader.onload = () => resolve(reader.result); reader.readAsArrayBuffer(blob); });
+      function base64(buffer) { const data = new Uint8Array(buffer); let text = ""; for (let i = 0; i < data.length; i++) text += String.fromCharCode(data[i]); return btoa(text); }
+      function safeName(name) { const stem = name.replace(/\.zip$/i, "").replace(/[\\/]+/g, "_").replace(/\.\.+/g, "_").replace(/[\u0000-\u001f\u007f]+/g, "_").replace(/^[._-]+|[._-]+$/g, "").slice(0, 72); return (stem || "bootanimation") + ".zip"; }
+
+      async function writeViaStream(file, staged) {
+        const stream = window.ksu.fileOutputStream();
+        const streamId = await Promise.resolve(stream.open(staged, false));
+        if (!streamId) throw new Error("无法创建上传文件。");
+        try {
+          for (let offset = 0; offset < file.size; offset += CHUNK) {
+            const chunk = file.slice(offset, Math.min(offset + CHUNK, file.size));
+            if (!await Promise.resolve(stream.write(streamId, base64(await readBuffer(chunk))))) throw new Error("写入动画包失败。");
+            el.pickProgress.value = Math.round(((offset + chunk.size) / file.size) * 100);
+          }
+          if (!await Promise.resolve(stream.flush(streamId)) || !await Promise.resolve(stream.close(streamId))) throw new Error("无法完成上传文件写入。");
+        } catch (error) {
+          try { stream.close(streamId); } catch (_) {}
+          throw error;
+        }
+      }
+
+      async function writeViaExec(file, staged) {
+        const initInner = ": > " + shellQuote(staged) + "; chmod 0666 " + shellQuote(staged) + " 2>/dev/null";
+        await command("sh -c " + shellQuote(initInner));
+        for (let offset = 0; offset < file.size; offset += CHUNK) {
+          const chunk = file.slice(offset, Math.min(offset + CHUNK, file.size));
+          const b64 = base64(await readBuffer(chunk));
+          const pipeInner = "echo '" + b64 + "' | base64 -d >> " + shellQuote(staged);
+          await command("sh -c " + shellQuote(pipeInner));
+          el.pickProgress.value = Math.round(((offset + chunk.size) / file.size) * 100);
+        }
+        const written = (await command("wc -c < " + shellQuote(staged))).trim();
+        if (String(written) !== String(file.size)) throw new Error("写入大小不一致（" + written + "/" + file.size + "），请改用“扫描手机存储”导入。");
+      }
+
+      async function findStoragePath(name, size) {
+        const dirs = STORAGE_DIRS.map(shellQuote).join(" ");
+        const cmd = "for d in " + dirs + "; do for f in \"$d\"/*.zip; do [ -f \"$f\" ] || continue; if [ \"$(basename \"$f\")\" = " + shellQuote(name) + " ] && [ \"$(wc -c < \"$f\" 2>/dev/null)\" = " + shellQuote(String(size)) + " ]; then printf '%s\\n' \"$f\"; exit 0; fi; done; done; exit 1";
+        const out = await command("sh -c " + shellQuote(cmd));
+        const line = out.trim();
+        return line && line.startsWith("/") ? line : null;
+      }
+
+      async function pickImport() {
+        if (!chosenFile || busy) return;
+        if (!/\.zip$/i.test(chosenFile.name)) { status(el.importStatus, t("msg_pick_zip_only"), "error"); return; }
+        const staged = moduleDir + "/var/tmp/upload-" + Date.now() + "-" + Math.floor(Math.random() * 1000000) + ".zip";
+        const name = displayName(chosenFile.name);
+        busy = true; updateControls(); el.pickProgress.hidden = false; el.pickProgress.value = 0;
+        status(el.importStatus, tf("msg_locating", { name: name })); await paint();
+        try {
+          const storagePath = chosenFile.path && chosenFile.path.startsWith("/") ? chosenFile.path : await findStoragePath(chosenFile.name, chosenFile.size);
+          if (storagePath) {
+            status(el.importStatus, t("msg_fast_import")); await paint();
+            const message = await importPathInner(storagePath);
+            chosenFile = null; el.pickZip.value = ""; el.pickName.textContent = "尚未选择文件";
+            status(el.importStatus, message, "success");
+            return;
+          }
+          status(el.importStatus, tf("msg_slow_import", { name: name })); await paint();
+          if (uploadReady()) await writeViaStream(chosenFile, staged);
+          else await writeViaExec(chosenFile, staged);
+          status(el.importStatus, t("msg_validating")); await paint();
+          const result = await controlCommand("import", staged, safeName(chosenFile.name));
+          if (!isOk(result)) throw new Error(result || "导入失败");
+          chosenFile = null; el.pickZip.value = ""; el.pickName.textContent = "尚未选择文件";
+          await refresh();
+          status(el.importStatus, tf("msg_imported_short", { name: name }), "success");
+        } catch (error) {
+          try { await command("rm -f " + shellQuote(staged)); } catch (_) {}
+          status(el.importStatus, friendlyError(error.message || String(error)), "error");
+        } finally {
+          busy = false; updateControls();
+          el.pickProgress.hidden = true; el.pickProgress.value = 0;
+        }
+      }
+
+      // ============================================================
+      // 改分辨率
+      // ============================================================
+      function updateDescFormatUI() {
+        const checked = document.querySelector('input[name="desc-format"]:checked');
+        const format = checked ? checked.value : 'standard';
+        el.descOffsetRows.classList.toggle('hidden', format !== 'oneplus');
+      }
+
+      document.querySelectorAll('input[name="desc-format"]').forEach(r => {
+        r.addEventListener('change', updateDescFormatUI);
+      });
+
+      async function refreshDescConfigs() {
+        try {
+          const [configsOut, modifiedOut] = await Promise.all([
+            controlCommand("config-list"),
+            controlCommand("modified-list")
+          ]);
+          renderConfigs(configsOut);
+          renderModified(modifiedOut);
+        } catch (_) {}
+      }
+
+      function renderConfigs(output) {
+        el.descConfigList.replaceChildren();
+        const lines = output.split(/\r?\n/).filter(Boolean);
+        if (!lines.length) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = t('desc_config_empty'); el.descConfigList.append(empty); return;
+        }
+        lines.forEach(line => {
+          const part = line.split("\t");
+          if (part.length < 6) return;
+          const name = part[0];
+          const format = part[1];
+          let width, height, offsetx, offsety, fps, created;
+          if (format === 'oneplus' && part.length >= 8) {
+            width = part[2]; height = part[3]; offsetx = part[4]; offsety = part[5]; fps = part[6]; created = part[7];
+          } else {
+            width = part[2]; height = part[3]; fps = part[4]; created = part[5];
+          }
+
+          const item = document.createElement("div"); item.className = "config-item";
+          const copy = document.createElement("div"); copy.className = "copy";
+          const nameEl = document.createElement("div"); nameEl.className = "name"; nameEl.textContent = name;
+          const meta = document.createElement("div"); meta.className = "meta";
+
+          let metaText;
+          if (format === 'oneplus') {
+            metaText = `${width}×${height} · X${offsetx} Y${offsety} · ${fps}fps · ${t('desc_format_oneplus')} · ${created || ''}`;
+          } else {
+            metaText = `${width}×${height} · ${fps}fps · ${t('desc_format_standard')} · ${created || ''}`;
+          }
+          meta.textContent = metaText;
+          copy.append(nameEl, meta);
+
+          const actions = document.createElement("div"); actions.className = "config-actions";
+          const applyBtn = document.createElement("button"); applyBtn.type = "button"; applyBtn.textContent = t('desc_apply');
+          applyBtn.addEventListener("click", () => openApplyModal(name));
+          const delBtn = document.createElement("button"); delBtn.type = "button"; delBtn.className = "secondary danger"; delBtn.textContent = t('desc_delete');
+          delBtn.addEventListener("click", () => deleteConfig(name, delBtn));
+          actions.append(applyBtn, delBtn);
+
+          item.append(copy, actions);
+          el.descConfigList.append(item);
+        });
+      }
+
+      function renderModified(output) {
+        el.descModifiedList.replaceChildren();
+        const lines = output.split(/\r?\n/).filter(Boolean);
+        if (!lines.length) {
+          const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = t('desc_modified_empty'); el.descModifiedList.append(empty); return;
+        }
+        lines.forEach(line => {
+          const part = line.split("\t");
+          if (part.length < 2) return;
+          const relPath = part[0];
+          const geometry = part[2] || '';
+          const item = document.createElement("div"); item.className = "config-item";
+          const copy = document.createElement("div"); copy.className = "copy";
+          const nameEl = document.createElement("div"); nameEl.className = "name"; nameEl.textContent = displayName(relPath);
+          const meta = document.createElement("div"); meta.className = "meta";
+          meta.textContent = geometry.trim() + ' · ' + relPath;
+          copy.append(nameEl, meta);
+          item.append(copy);
+          el.descModifiedList.append(item);
+        });
+      }
+
+      async function deleteConfig(name, btn) {
+        if (busy) return;
+        if (btn.dataset.confirm !== "yes") {
+          btn.dataset.confirm = "yes"; btn.textContent = t('desc_confirm_delete');
+          setTimeout(() => { if (btn.dataset.confirm === "yes") { btn.dataset.confirm = ""; btn.textContent = t('desc_delete'); } }, 3000);
+          return;
+        }
+        busy = true; updateControls();
+        try {
+          const result = await controlCommand("config-delete", name);
+          if (!isOk(result)) throw new Error(result || "删除失败");
+          await refreshDescConfigs();
+          status(el.descConfigStatus, t('desc_config_deleted') + name, 'success');
+        } catch (e) { status(el.descConfigStatus, friendlyError(e.message || String(e)), 'error'); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function readOriginal() {
+        if (busy) return;
+        busy = true; updateControls();
+        try {
+          const result = await controlCommand("desc-original");
+          if (!isOk(result)) throw new Error(result || t('desc_original_missing'));
+          const firstLine = result.split(/\r?\n/)[0].replace(/^OK\s*/, '').trim();
+          const part = firstLine.split(/\s+/);
+          const format = part[part.length - 1];
+          if (format === 'standard' && part.length >= 4) {
+            el.descWidth.value = part[0];
+            el.descHeight.value = part[1];
+            el.descFps.value = part[2];
+            document.querySelectorAll('input[name="desc-format"]').forEach(r => { r.checked = r.value === 'standard'; });
+            updateDescFormatUI();
+            status(el.descCreateStatus, t('desc_original_loaded') + part[0] + '×' + part[1] + ' · ' + part[2] + 'fps · 常规', 'success');
+          } else if (format === 'oneplus' && part.length >= 6) {
+            el.descWidth.value = part[0];
+            el.descHeight.value = part[1];
+            el.descOffsetX.value = part[2];
+            el.descOffsetY.value = part[3];
+            el.descFps.value = part[4];
+            document.querySelectorAll('input[name="desc-format"]').forEach(r => { r.checked = r.value === 'oneplus'; });
+            updateDescFormatUI();
+            status(el.descCreateStatus, t('desc_original_loaded') + part[0] + '×' + part[1] + ' · X' + part[2] + ' Y' + part[3] + ' · ' + part[4] + 'fps · 欧加', 'success');
+          }
+        } catch (e) { status(el.descCreateStatus, friendlyError(e.message || String(e)), 'error'); }
+        finally { busy = false; updateControls(); }
+      }
+
+      async function saveConfig() {
+        if (busy) return;
+        const name = (el.descConfigName.value || '').trim();
+        const width = (el.descWidth.value || '').trim();
+        const height = (el.descHeight.value || '').trim();
+        const fps = (el.descFps.value || '').trim();
+        const formatRadio = document.querySelector('input[name="desc-format"]:checked');
+        const format = formatRadio ? formatRadio.value : 'standard';
+        const offsetx = (el.descOffsetX.value || '').trim();
+        const offsety = (el.descOffsetY.value || '').trim();
+
+        if (!name) { status(el.descCreateStatus, t('desc_config_name_invalid'), 'error'); return; }
+        if (!width || !height || !fps) { status(el.descCreateStatus, t('desc_fill_required'), 'error'); return; }
+        if (format === 'oneplus' && (!offsetx || !offsety)) { status(el.descCreateStatus, t('desc_offset_required'), 'error'); return; }
+
+        busy = true; updateControls();
+        try {
+          let result;
+          if (format === 'oneplus') {
+            result = await controlCommand("config-save", name, format, width, height, offsetx, offsety, fps);
+          } else {
+            result = await controlCommand("config-save", name, format, width, height, fps);
+          }
+          if (result.includes("配置名已存在")) { status(el.descCreateStatus, t('desc_config_name_exists'), 'error'); return; }
+          if (!isOk(result)) throw new Error(result || t('desc_config_name_invalid'));
+          await refreshDescConfigs();
+          status(el.descCreateStatus, t('desc_config_saved') + name, 'success');
+          el.descConfigName.value = '';
+        } catch (e) { status(el.descCreateStatus, friendlyError(e.message || String(e)), 'error'); }
+        finally { busy = false; updateControls(); }
+      }
+
+      // ============================================================
+      // 弹窗
+      // ============================================================
+      let modalCallback = null;
+
+      function openModal(opts) {
+        modalCallback = opts.onConfirm || null;
+        el.modalTitle.textContent = opts.title || '';
+        el.modalSub.textContent = opts.sub || '';
+        el.modalConfirm.textContent = opts.confirmText || '确认';
+        el.modalList.replaceChildren();
+
+        const forceRow = document.getElementById("modal-force-row");
+        const forceCb = document.getElementById("modal-force");
+        if (opts.showForce) {
+          forceRow.style.display = "flex";
+        } else {
+          forceRow.style.display = "none";
+        }
+        forceCb.checked = false;
+
+        opts.items.forEach(it => {
+          const row = document.createElement('label'); row.className = 'modal-item';
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = it.value;
+          const nameEl = document.createElement('span'); nameEl.className = 'modal-name'; nameEl.textContent = it.label;
+          const metaEl = document.createElement('span'); metaEl.className = 'modal-meta'; metaEl.textContent = it.meta || '';
+          row.append(cb, nameEl, metaEl);
+          el.modalList.append(row);
+        });
+
+        el.modalOverlay.classList.add('open');
+      }
+
+      function closeModal() {
+        el.modalOverlay.classList.remove('open');
+      }
+
+      async function openApplyModal(name) {
+        try {
+          const listOut = await controlCommand("list");
+          const list = entries(listOut);
+          if (!list.length) {
+            status(el.descConfigStatus, '动画库为空', 'error');
+            return;
+          }
+          const configsOut = await controlCommand("config-list");
+          let configInfo = null;
+          configsOut.split(/\r?\n/).filter(Boolean).forEach(line => {
+            const part = line.split("\t");
+            if (part[0] === name) {
+              if (part[1] === 'oneplus' && part.length >= 8) {
+                configInfo = { name: part[0], format: part[1], width: part[2], height: part[3], offsetx: part[4], offsety: part[5], fps: part[6] };
+              } else if (part.length >= 6) {
+                configInfo = { name: part[0], format: part[1], width: part[2], height: part[3], fps: part[4] };
+              }
+            }
+          });
+          if (!configInfo) { status(el.descConfigStatus, '配置不存在', 'error'); return; }
+
+          let subText;
+          if (configInfo.format === 'oneplus') {
+            subText = `${configInfo.width}×${configInfo.height} · X${configInfo.offsetx} Y${configInfo.offsety} · ${configInfo.fps}fps · ${t('desc_format_oneplus')}\n${t('desc_modal_apply_sub')}`;
+          } else {
+            subText = `${configInfo.width}×${configInfo.height} · ${configInfo.fps}fps · ${t('desc_format_standard')}\n${t('desc_modal_apply_sub')}`;
+          }
+
+          const items = list.map(e => ({
+            value: e.path,
+            path: e.path,
+            label: displayName(e.path),
+            meta: (e.info ? e.info + ' · ' : '') + bytes(e.size)
+          }));
+
+          openModal({
+            title: t('desc_apply_title') + '：' + name,
+            sub: subText,
+            confirmText: t('desc_modal_confirm'),
+            items,
+            showForce: true,
+            onConfirm: async (selectedPaths) => {
+              if (!selectedPaths.length) { status(el.descConfigStatus, t('desc_apply_no_selection'), 'error'); return; }
+              busy = true; updateControls();
+              try {
+                // 默认 normal 模式
+                const forceCb = document.getElementById("modal-force");
+                const mode = forceCb.checked ? "force" : "normal";
+                const result = await command(control("apply-config", name, mode, ...selectedPaths));
+                await refreshDescConfigs();
+                await refresh();
+                const lines = result.split(/\r?\n/).filter(Boolean);
+                const okList = [];
+                const skipList = [];
+                lines.forEach(l => {
+                  const part = l.split('\t');
+                  if (part[0] === 'OK') okList.push(part[1]);
+                  else if (part[0] === 'SKIP') skipList.push({ path: part[1], reason: part[2] });
+                });
+                let summary = t('desc_apply_success') + name + '\n';
+                summary += `  ${t('desc_apply_summary_success')} ${okList.length} 个：${okList.map(p => displayName(p)).join('、') || '—'}\n`;
+                if (skipList.length) {
+                  summary += `  ${t('desc_apply_summary_skip')} ${skipList.length} 个：\n`;
+                  skipList.forEach(s => {
+                    summary += `    ${displayName(s.path)}（${s.reason}）\n`;
+                  });
+                }
+                el.descResult.textContent = summary;
+                el.descResult.classList.remove('hidden');
+              } catch (e) {
+                status(el.descConfigStatus, friendlyError(e.message || String(e)), 'error');
+              } finally { busy = false; updateControls(); }
+            }
+          });
+        } catch (e) { status(el.descConfigStatus, friendlyError(e.message || String(e)), 'error'); }
+      }
+
+      async function openRestoreModal() {
+        if (busy) return;
+        try {
+          const modifiedOut = await controlCommand("modified-list");
+          const lines = modifiedOut.split(/\r?\n/).filter(Boolean);
+          if (!lines.length) { status(el.descModifiedStatus, t('desc_modified_empty'), 'error'); return; }
+          const items = lines.map(line => {
+            const part = line.split("\t");
+            return { value: part[0], path: part[0], label: displayName(part[0]), meta: part[1] || '' };
+          });
+          openModal({
+            title: t('desc_restore_title'),
+            sub: t('desc_modal_restore_sub'),
+            confirmText: t('desc_modal_confirm_restore'),
+            items,
+            onConfirm: async (selectedPaths) => {
+              if (!selectedPaths.length) { status(el.descModifiedStatus, t('desc_restore_no_selection'), 'error'); return; }
+              if (!confirm(t('desc_restore_confirm'))) return;
+              busy = true; updateControls();
+              try {
+                for (const relPath of selectedPaths) {
+                  const fullPath = moduleDir + '/' + relPath;
+                  await controlCommand("desc-restore", fullPath);
+                }
+                await refreshDescConfigs();
+                await refresh();
+                el.descResult.textContent = t('desc_restore_success') + selectedPaths.map(p => displayName(p)).join('、');
+                el.descResult.classList.remove('hidden');
+              } catch (e) { status(el.descModifiedStatus, friendlyError(e.message || String(e)), 'error'); }
+              finally { busy = false; updateControls(); }
+            }
+          });
+        } catch (e) { status(el.descModifiedStatus, friendlyError(e.message || String(e)), 'error'); }
+      }
+
+      el.modalCancel.addEventListener('click', closeModal);
+      el.modalOverlay.addEventListener('click', e => { if (e.target === el.modalOverlay) closeModal(); });
+      el.modalSelectAll.addEventListener('click', () => {
+        el.modalList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; });
+      });
+      el.modalSelectNone.addEventListener('click', () => {
+        el.modalList.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+      });
+      el.modalConfirm.addEventListener('click', async () => {
+        const selected = [...el.modalList.querySelectorAll('input[type=checkbox]:checked')].map(cb => cb.value);
+        closeModal();
+        if (modalCallback) await modalCallback(selected);
+      });
+
+      // ============================================================
+      // 悬浮刷新按钮
+      // ============================================================
+      async function doFloatRefresh() {
+        const btn = el.floatRefresh;
+        if (busy || !btn) return;
+        btn.classList.add("spinning");
+        btn.disabled = true;
+        try {
+          // refresh() 内部已包含 loadLogs + refreshDescConfigs
+          // 这里并行跑 overlay / playmode，去掉重复调用
+          await Promise.all([
+            refresh(),
+            loadOverlayStatus(),
+            loadPlayModeStatus(),
+          ]);
+          status(el.libraryStatus, t("msg_refreshed"), "success");
+        } catch (e) {
+          status(el.libraryStatus, friendlyError(e.message || String(e)), "error");
+        } finally {
+          btn.classList.remove("spinning");
+          btn.disabled = false;
+        }
+      }
+
+      if (el.floatRefresh) {
+        el.floatRefresh.addEventListener("click", doFloatRefresh);
+      }
+
+      // ============================================================
+      // 事件绑定
+      // ============================================================
+      el.pickZip.addEventListener("change", event => {
+        chosenFile = event.target.files && event.target.files[0] || null;
+        el.pickName.textContent = chosenFile ? displayName(chosenFile.name) + " · " + bytes(chosenFile.size) : "尚未选择文件";
+        updateControls();
+      });
+      el.pickImport.addEventListener("click", pickImport);
+      el.scanStorage.addEventListener("click", scanStorage);
+      el.refreshLogs.addEventListener("click", () => { loadLogs(); });
+      if (el.refreshSelfcheck) {
+        // SELFCHECK_BUTTON_PATCH: 按钮触发 + 防重复 + 报错
+        // SELFCHECK_RERUN_PATCH
+        let selfcheckDone = false;
+        el.refreshSelfcheck.addEventListener("click", async () => {
+          const btn = el.refreshSelfcheck;
+          if (btn.disabled) return;
+          btn.disabled = true;
+          btn.textContent = t("selfcheck_running");
+          status(el.libraryStatus, t("msg_selfchecking"));
+          try {
+            await renderSelfCheck();
+            selfcheckDone = true;
+            btn.dataset.done = "yes";
+            btn.textContent = t("selfcheck_rerun");
+            status(el.libraryStatus, t("msg_selfcheck_done"), "success");
+          } catch (e) {
+            status(el.libraryStatus, tf("msg_selfcheck_fail", { err: e.message || e }), "error");
+            btn.textContent = selfcheckDone ? t("selfcheck_rerun") : t("refresh_selfcheck");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      }
+      el.resetDefault.addEventListener("click", () => {
+        if (busy) return;
+        if (el.resetDefault.dataset.confirm !== "yes") {
+          el.resetDefault.dataset.confirm = "yes"; el.resetDefault.textContent = t("msg_btn_confirm_switch");
+          setTimeout(() => { if (el.resetDefault.dataset.confirm === "yes") { el.resetDefault.dataset.confirm = ""; el.resetDefault.textContent = t('reset_default'); } }, 3000);
+          return;
+        }
+        resetDefault();
+      });
+
+      el.descReadOriginal.addEventListener("click", readOriginal);
+      el.descSaveConfig.addEventListener("click", saveConfig);
+      el.descRestoreBtn.addEventListener("click", openRestoreModal);
+      // ============================================================
+      // 音频导入
+      // ============================================================
+      let audioChosenFile = null;
+
+      // ============================================================
+      // 音频辅助：解析路径 + 扫描手机存储
+      // ============================================================
+      async function resolveAudioPath(file) {
+        if (!file) return null;
+        if (file.path && file.path.startsWith("/")) return file.path;
+        const dirs = STORAGE_DIRS.map(shellQuote).join(" ");
+        const cmd = "for d in " + dirs + "; do " +
+                    "for f in \"$d\"/*; do " +
+                    "[ -f \"$f\" ] || continue; " +
+                    "if [ \"$(basename \"$f\")\" = " + shellQuote(file.name) + " ] && " +
+                       "[ \"$(wc -c < \"$f\" 2>/dev/null)\" = " + shellQuote(String(file.size)) + " ]; then " +
+                    "printf '%s\\n' \"$f\"; exit 0; fi; " +
+                    "done; done; exit 1";
+        try {
+          const out = await command("sh -c " + shellQuote(cmd));
+          const line = out.trim();
+          if (line.startsWith("/")) return line;
+        } catch (_) {}
+        return null;
+      }
+
+      let audioStorageFiles = [];
+
+      async function deleteAudioFile(path) {
+        if (busy) return;
+        busy = true; updateControls();
+        try {
+          const rmInner = "rm -f " + shellQuote(path) + " && echo OK || echo FAIL";
+          const result = await command("sh -c " + shellQuote(rmInner));
+          if (!result.trim().endsWith("OK")) throw new Error(t("msg_delete_fail"));
+          audioStorageFiles = audioStorageFiles.filter(p => p !== path);
+          renderAudioStorage(audioStorageFiles);
+          status(el.audioStatus, tf("msg_audio_deleted", { path: path }), "success");
+        } catch (e) {
+          status(el.audioStatus, friendlyError(e.message || String(e)), "error");
+        } finally {
+          busy = false; updateControls();
+        }
+      }
+
+      function renderAudioStorage(files) {
+        const box = el.audioStorageList;
+        if (!box) return;
+        box.replaceChildren();
+        if (!files.length) {
+          const empty = document.createElement("div"); empty.className = "empty";
+          empty.textContent = t("msg_no_audio");
+          box.append(empty); return;
+        }
+        files.forEach(path => {
+          const item = document.createElement("div"); item.className = "item";
+          const copy = document.createElement("div"); copy.className = "copy";
+          const name = document.createElement("div"); name.className = "name";
+          name.textContent = path.split("/").pop();
+          const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = path;
+          copy.append(name, meta);
+          const btn = document.createElement("button"); btn.type = "button"; btn.textContent = t("msg_btn_fill");
+          btn.addEventListener("click", () => {
+            el.audioPath.value = path;
+            audioChosenFile = null;
+            status(el.audioStatus, tf("msg_audio_filled", { path: path }), "success");
+          });
+          const delBtn = document.createElement("button"); delBtn.type = "button"; delBtn.className = "secondary danger"; delBtn.textContent = "删除";
+          delBtn.addEventListener("click", () => {
+            if (delBtn.dataset.confirm !== "yes") {
+              delBtn.dataset.confirm = "yes"; delBtn.textContent = t("msg_btn_confirm_short");
+              setTimeout(() => { if (delBtn.dataset.confirm === "yes") { delBtn.dataset.confirm = ""; delBtn.textContent = t("msg_btn_delete"); } }, 3000);
+              return;
+            }
+            deleteAudioFile(path);
+          });
+          item.append(copy, btn, delBtn);
+          box.append(item);
+        });
+      }
+
+      async function scanAudio() {
+        if (busy) return;
+        busy = true; updateControls(); status(el.audioStatus, t("msg_scanning")); await paint();
+        const found = new Map();
+        try {
+          for (const dir of STORAGE_DIRS) {
+            const lsInner = "ls -1 " + shellQuote(dir) + "/*.wav " + shellQuote(dir) + "/*.mp3 " +
+              shellQuote(dir) + "/*.ogg " + shellQuote(dir) + "/*.m4a " + shellQuote(dir) + "/*.flac 2>/dev/null";
+            const out = await command("sh -c " + shellQuote(lsInner));
+            out.split(/\r?\n/).forEach(line => {
+              line = line.trim();
+              if (line.startsWith("/") && /\.(wav|mp3|ogg|m4a|flac)$/i.test(line)) {
+                const base = line.split("/").pop();
+                if (!found.has(base)) found.set(base, line);
+              }
+            });
+          }
+          audioStorageFiles = [...found.values()].sort();
+          renderAudioStorage(audioStorageFiles);
+          status(el.audioStatus, audioStorageFiles.length
+            ? tf("msg_scan_audio_found", { n: audioStorageFiles.length })
+            : t("msg_scan_audio_empty"));
+        } catch (e) {
+          status(el.audioStatus, friendlyError(e.message || String(e)), "error");
+        } finally {
+          busy = false; updateControls();
+        }
+      }
+
+
+      function updateAudioControls() {
+        const ready = bridgeReady();
+        const hasFile = !!(el.audioPath && el.audioPath.value.trim()) || !!audioChosenFile;
+        if (el.audioPick) el.audioPick.disabled = busy || !ready;
+        if (el.audioScan) el.audioScan.disabled = busy || !ready;
+        if (el.audioImport) el.audioImport.disabled = busy || !ready || !hasFile;
+      }
+
+      if (el.audioPick) {
+        el.audioPick.addEventListener("change", async e => {
+          audioChosenFile = e.target.files && e.target.files[0] || null;
+          if (audioChosenFile) {
+            el.audioPath.value = audioChosenFile.name;
+            // 勾了"跳过检查"就不遍历目录找完整路径
+            if (!el.audioSkipCheck || !el.audioSkipCheck.checked) {
+              const fullPath = await resolveAudioPath(audioChosenFile);
+              if (fullPath) el.audioPath.value = fullPath;
+            }
+          }
+          updateAudioControls();
+        });
+      }
+
+      if (el.audioScan) {
+        el.audioScan.addEventListener("click", scanAudio);
+      }
+
+      if (el.audioRemoveAll) {
+        el.audioRemoveAll.addEventListener("click", async () => {
+          if (busy) return;
+          if (el.audioRemoveAll.dataset.confirm !== "yes") {
+            el.audioRemoveAll.dataset.confirm = "yes";
+            el.audioRemoveAll.textContent = t('audio_remove_confirm');
+            setTimeout(() => {
+              if (el.audioRemoveAll.dataset.confirm === "yes") {
+                el.audioRemoveAll.dataset.confirm = "";
+                el.audioRemoveAll.textContent = t('audio_remove_all');
+              }
+            }, 3000);
+            return;
+          }
+          busy = true; updateControls();
+          status(el.audioStatus, t("msg_removing_audio")); await paint();
+          try {
+            const result = await controlCommand("audio-remove");
+            await refresh();
+
+            const lines = result.split(/\r?\n/).filter(Boolean);
+            const removed = [];
+            lines.forEach(line => {
+              if (line.startsWith("OK ")) {
+                const parts = line.slice(3).split("\t");
+                removed.push({ type: parts[0] || "", path: parts[1] || "" });
+              }
+            });
+
+            if (removed.length === 0) {
+              status(el.audioStatus, t("msg_no_audio_to_remove"), "success");
+            } else {
+              let text = tf("msg_audio_removed_n", { n: removed.length }) + "\n";
+              removed.forEach(r => {
+                text += "  · [" + r.type + "] " + displayName(r.path) + "\n";
+              });
+              status(el.audioStatus, text, "success");
+            }
+          } catch (e) {
+            status(el.audioStatus, friendlyError(e.message || String(e)), "error");
+          } finally {
+            busy = false; updateControls();
+          }
+        });
+      }
+
+      if (el.audioImport) {
+        el.audioImport.addEventListener("click", async () => {
+          if (busy) return;
+          const userPath = (el.audioPath.value || "").trim();
+          if (!userPath && !audioChosenFile) { status(el.audioStatus, t('audio_no_file'), 'error'); return; }
+
+          // 如果手输了绝对路径，先校验存在 + 可读
+          // 勾了"跳过检查"就不校验
+          const skipCheck = el.audioSkipCheck && el.audioSkipCheck.checked;
+          if (userPath.startsWith("/") && !skipCheck) {
+            status(el.audioStatus, t("msg_checking_file")); await paint();
+            try {
+              const innerCheck = "[ -f " + shellQuote(userPath) + " ] && [ -r " + shellQuote(userPath) + " ] && echo OK || echo FAIL";
+              const check = await command("sh -c " + shellQuote(innerCheck));
+              if (!check.trim().endsWith("OK")) {
+                status(el.audioStatus, tf("msg_file_missing", { path: userPath }), 'error');
+                return;
+              }
+            } catch (e) {
+              status(el.audioStatus, friendlyError(e.message || String(e)), 'error');
+              return;
+            }
+          }
+
+          const mode = (document.querySelector('input[name="audio-android"]:checked') || {}).value || '9plus';
+
+          // 打开弹窗选动画
+          let list;
+          try {
+            const listOut = await controlCommand("list");
+            list = entries(listOut);
+          } catch (e) {
+            status(el.audioStatus, friendlyError(e.message || String(e)), 'error');
+            return;
+          }
+          if (!list.length) { status(el.audioStatus, '动画库为空', 'error'); return; }
+
+          openModal({
+            title: t('audio_modal_title'),
+            sub: `${audioChosenFile.name} · ${mode === '9plus' ? 'Android 9+' : mode === '9minus' ? '≤ Android 9' : '仅MIUI'}\n${t('audio_modal_sub')}`,
+            confirmText: t('audio_import'),
+            items: list.map(e => ({
+              value: e.path,
+              path: e.path,
+              label: displayName(e.path),
+              meta: (e.info ? e.info + ' · ' : '') + bytes(e.size)
+            })),
+            onConfirm: async (selectedPaths) => {
+              if (!selectedPaths.length) { status(el.audioStatus, t('audio_no_selection'), 'error'); return; }
+              busy = true; updateControls(); updateAudioControls();
+              el.audioProgress.hidden = false; el.audioProgress.value = 0;
+              status(el.audioStatus, t('audio_uploading')); await paint();
+
+              const staged = moduleDir + "/var/tmp/audio-" + Date.now() + ".wav";
+              try {
+                // 上传音频
+                if (userPath.startsWith("/")) {
+                  status(el.audioStatus, t("msg_copying_audio")); await paint();
+                  const cpInner = "cp -f " + shellQuote(userPath) + " " + shellQuote(staged) + " && chmod 0644 " + shellQuote(staged) + " && echo OK || echo FAIL";
+                  const cp = await command("sh -c " + shellQuote(cpInner));
+                  if (!cp.trim().endsWith("OK")) throw new Error(t("msg_copy_audio_fail"));
+                } else if (audioChosenFile) {
+                  if (uploadReady()) {
+                    await writeViaStream(audioChosenFile, staged);
+                  } else {
+                    await writeViaExec(audioChosenFile, staged);
+                  }
+                } else {
+                  throw new Error(t("msg_no_audio_source"));
+                }
+                el.audioProgress.value = 30;
+
+                status(el.audioStatus, t('audio_importing')); await paint();
+                const result = await command(control("audio-import", staged, mode, ...selectedPaths));
+                el.audioProgress.value = 100;
+
+                if (!isOk(result)) throw new Error(result || t('audio_fail'));
+                status(el.audioStatus, t('audio_success'), 'success');
+                await refresh();
+              } catch (e) {
+                status(el.audioStatus, friendlyError(e.message || String(e)), 'error');
+                try { await command("rm -f " + shellQuote(staged)); } catch (_) {}
+              } finally {
+                busy = false; updateControls(); updateAudioControls();
+                el.audioProgress.hidden = true; el.audioProgress.value = 0;
+              }
+            }
+          });
+        });
+      }
+
+      el.descUndoBtn.addEventListener("click", async () => {
+        if (busy || !hasUndoFlag) return;
+        if (!confirm(t('desc_undo_confirm'))) return;
+        busy = true; updateControls();
+        try {
+          const result = await controlCommand("undo");
+          if (!isOk(result)) throw new Error(result || t('desc_undo_none'));
+          hasUndoFlag = false;
+          await refreshDescConfigs();
+          await refresh();
+          el.descResult.textContent = t('desc_undo_success');
+          el.descResult.classList.remove('hidden');
+        } catch (e) { status(el.descModifiedStatus, friendlyError(e.message || String(e)), 'error'); }
+        finally { busy = false; updateControls(); }
+      });
+
+      // ============================================================
+      // 初始化
+      // ============================================================
+      (async () => {
+        try {
+          const info = bridgeReady() && typeof window.ksu.moduleInfo === "function" ? window.ksu.moduleInfo() : null;
+          const parsed = typeof info === "string" ? JSON.parse(info) : info;
+          if (parsed && parsed.moduleDir) moduleDir = parsed.moduleDir;
+        } catch (_) {}
+
+        if (!bridgeReady()) {
+          el.current.textContent = t("msg_open_in_manager");
+          status(el.libraryStatus, t("msg_bridge_unavailable"), "error");
+          updateControls();
+          return;
+        }
+
+        updateControls();
+
+        try {
+          const statusOut = await controlCommand("status");
+          const current = props(statusOut);
+          currentBrand = current.brand || 'xiaomi';
+          if (current.language) {
+            currentLang = current.language;
+            document.querySelectorAll('input[name="language-radio"]').forEach(r => { r.checked = r.value === currentLang; });
+          }
+          const savedTheme = current.theme || 'light';
+          hasUndoFlag = current.has_undo === 'yes';
+
+          applyLanguage(currentLang);
+          updateDescFormatUI();
+          updateControls();
+
+          // 先播过渡（若保存的是深色），播完再拉数据，避免 shell 命令抢主线程
+          if (savedTheme !== 'light') {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await switchTheme(savedTheme);
+          } else {
+            applyTheme('light');
+          }
+
+          // 过渡结束后再拉数据
+          await refresh();
+          await loadOverlayStatus();
+          await loadPlayModeStatus();
+
+          const cur = props(await controlCommand("status"));
+          if (cur.import_busy === "yes") resumeImport();
+        } catch (_) {}
+      })();
+    })();
+  </script>
+</body>
+</html>

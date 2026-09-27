@@ -1,0 +1,6 @@
+# global width height offsetx offsety fps
+#
+g 1080 2400 0 671 30
+
+c 1 0 part0
+c 0 0 part1
